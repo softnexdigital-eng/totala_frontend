@@ -28,6 +28,7 @@ interface Appointment {
   id: string;
   patientId?: string;
   doctorId: string;
+  doctorName?: string;
   agentId?: string;
   hospital?: string;
   date: string;
@@ -35,6 +36,8 @@ interface Appointment {
   serviceType: string;
   serviceFee: number;
   discountPercent?: number;
+  serialNo?: string | null;
+  serialTime?: string | null;
   notes?: string;
   doctor?: { name: string; specialization: string };
   patient?: { name: string };
@@ -279,6 +282,8 @@ export default function DoctorBookingPage() {
     whatsappNumber: '',
     packageId: '',
     packageDiscount: '0',
+    serialNo: '',
+    serialTime: '',
   });
 
   useEffect(() => {
@@ -305,10 +310,10 @@ export default function DoctorBookingPage() {
   const fetchData = async () => {
     try {
       const [doctorsRes, patientsRes, agentsRes, appointmentsRes, packagesRes] = await Promise.all([
-        fetch('/api/doctors'),
-        fetch('/api/patients'),
-        fetch('/api/agents'),
-        fetch('/api/appointments'),
+        fetch('/api/doctors', { credentials: 'include' }),
+        fetch('/api/patients', { credentials: 'include' }),
+        fetch('/api/agents', { credentials: 'include' }),
+        fetch('/api/appointments', { credentials: 'include' }),
         fetch('/api/packages'),
       ]);
 
@@ -345,11 +350,14 @@ export default function DoctorBookingPage() {
       const payload: any = {
         patientId: formData.patientId,
         doctorId: selectedDoctor.id,
+        doctorName: selectedDoctor.name,
         agentId: currentAgentId || formData.agentId || null,
         date: formData.date,
         serviceType: formData.serviceType,
         notes: formData.notes,
         whatsappNumber: formData.whatsappNumber,
+        serialNo: formData.serialNo.trim() || null,
+        serialTime: formData.serialTime ? new Date(formData.serialTime).toISOString() : null,
       };
 
       if (formData.serviceType === 'package' && formData.packageId) {
@@ -360,6 +368,7 @@ export default function DoctorBookingPage() {
       const response = await fetch('/api/appointments/book', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(payload),
       });
 
@@ -377,6 +386,8 @@ export default function DoctorBookingPage() {
           whatsappNumber: '',
           packageId: '',
           packageDiscount: '0',
+          serialNo: '',
+          serialTime: '',
         });
         fetchData();
       } else {
@@ -390,13 +401,14 @@ export default function DoctorBookingPage() {
 
   const handleAssignAgent = async (appointmentId: string, agentId: string) => {
     try {
-      const response = await fetch(`/api/appointments/${appointmentId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ agentId }),
-      });
+       const response = await fetch(`/api/appointments/${appointmentId}`, {
+         method: 'PUT',
+         headers: {
+           'Content-Type': 'application/json',
+         },
+         credentials: 'include',
+         body: JSON.stringify({ agentId }),
+       });
 
       const result = await response.json();
 
@@ -417,23 +429,26 @@ export default function DoctorBookingPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this appointment?')) return;
+    if (!confirm('আপনি কি নিশ্চিত যে এই অ্যাপয়েন্টমেন্ট ডিলিট করতে চান?')) return;
 
     try {
+      const token = document.cookie.match(/(?:^|; )token=([^;]+)/);
       const response = await fetch(`/api/appointments/${id}`, {
         method: 'DELETE',
+        headers: token ? { Authorization: `Bearer ${decodeURIComponent(token[1])}` } : {},
+        credentials: 'include',
       });
 
       const result = await response.json();
 
       if (result.success) {
-        toast.success('Appointment deleted successfully!');
+        toast.success('অ্যাপয়েন্টমেন্ট ডিলিট করা হয়েছে');
         fetchData();
       } else {
-        toast.error(result.message || 'Failed to delete appointment');
+        toast.error(result.message || 'অ্যাপয়েন্টমেন্ট ডিলিট করা যায়নি');
       }
     } catch (error) {
-      toast.error('Something went wrong');
+      toast.error('কিছু সমস্যা হয়েছে');
     }
   };
 
@@ -449,10 +464,11 @@ export default function DoctorBookingPage() {
   );
 
   const filteredAppointments = appointments.filter((apt) => {
+    const aptDoctorName = apt.doctor?.name || doctors.find((d) => d.id === apt.doctorId)?.name || '';
     const matchesSearch =
-      apt.doctor?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      apt.hospital?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      apt.patient?.name.toLowerCase().includes(searchTerm.toLowerCase());
+      aptDoctorName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (apt.hospital || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (apt.patient?.name || '').toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesStatus = filterStatus === 'all' || apt.status === filterStatus;
 
@@ -475,7 +491,7 @@ export default function DoctorBookingPage() {
   if (loading) {
     return (
       <div className="h-screen overflow-y-auto bg-[#FAFAF8]">
-        <div className="mx-auto max-w-7xl px-4 py-5 sm:px-6 sm:py-8 lg:px-8">
+        <div className="mx-auto max-w-7.5xl px-4 py-5 sm:px-6 sm:py-8 lg:px-8">
           <div className="h-6 w-40 animate-pulse rounded bg-slate-100" />
           <div className="mt-2 h-3.5 w-64 animate-pulse rounded bg-slate-100" />
 
@@ -504,7 +520,7 @@ export default function DoctorBookingPage() {
     // scrolling along with this page, its wrapper needs `sticky top-0 h-screen overflow-y-auto`
     // (or `fixed`) in your layout — that's the other half of this fix and lives outside this file.
     <div className="h-screen overflow-y-auto bg-[#FAFAF8]">
-      <div className="mx-auto max-w-7xl px-4 py-5 sm:px-6 sm:py-8 lg:px-8">
+      <div className="mx-auto max-w-7.5xl px-4 py-5 sm:px-6 sm:py-8 lg:px-8">
         <h1 className="text-xl font-semibold text-slate-900 sm:text-2xl">Doctor Booking</h1>
         <p className="mt-1 text-sm text-slate-500">Book appointments and manage patient bookings.</p>
 
@@ -690,15 +706,22 @@ export default function DoctorBookingPage() {
                         <IconUser className="h-4 w-4 flex-shrink-0 text-slate-400" />
                         <span className="truncate">{apt.patient?.name || 'Not assigned'}</span>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <span className="flex-shrink-0 text-xs font-medium uppercase tracking-wide text-slate-400">
-                          Dr
-                        </span>
-                        <span className="truncate">
-                          {apt.doctor?.name || 'N/A'}
-                          {apt.doctor?.specialization ? ` · ${apt.doctor.specialization}` : ''}
-                        </span>
-                      </div>
+                       <div className="flex items-center gap-2">
+                         <span className="flex-shrink-0 text-xs font-medium uppercase tracking-wide text-slate-400">
+                           Dr
+                         </span>
+                         <span className="truncate">
+                           {apt.doctor?.name ||
+                             doctors.find((d) => d.id === apt.doctorId)?.name ||
+                             apt.doctorName ||
+                             'N/A'}
+                           {apt.doctor?.specialization
+                             ? ` · ${apt.doctor.specialization}`
+                             : doctors.find((d) => d.id === apt.doctorId)?.specialization
+                             ? ` · ${doctors.find((d) => d.id === apt.doctorId)?.specialization}`
+                             : ''}
+                         </span>
+                       </div>
                       {apt.hospital && (
                         <div className="flex items-center gap-2">
                           <IconHospital className="h-4 w-4 flex-shrink-0 text-slate-400" />
@@ -712,6 +735,12 @@ export default function DoctorBookingPage() {
                         <span className="rounded-full bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-700">
                           {apt.serviceFee} BDT
                         </span>
+                        {apt.serialNo && (
+                          <span className="rounded-full bg-teal-50 px-2.5 py-1 text-xs font-medium text-teal-700">
+                            Serial: {apt.serialNo}
+                            {apt.serialTime ? ` · ${new Date(apt.serialTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : ''}
+                          </span>
+                        )}
                         {apt.status === 'completed' && (
                           <span className="rounded-full bg-green-50 px-2.5 py-1 text-xs font-medium text-green-700">
                             {apt.discountPercent ?? 0}% discount
@@ -863,6 +892,29 @@ export default function DoctorBookingPage() {
                   />
                 </div>
               )}
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-slate-700">Serial Number</label>
+                  <input
+                    type="text"
+                    value={formData.serialNo}
+                    onChange={(e) => setFormData({ ...formData, serialNo: e.target.value })}
+                    placeholder="e.g. 12"
+                    className="min-h-[44px] w-full rounded-xl border border-slate-200 px-3 text-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-100"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-slate-700">Serial Time</label>
+                  <input
+                    type="datetime-local"
+                    value={formData.serialTime}
+                    onChange={(e) => setFormData({ ...formData, serialTime: e.target.value })}
+                    className="min-h-[44px] w-full rounded-xl border border-slate-200 px-3 text-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-100"
+                  />
+                </div>
+              </div>
 
               <div>
                 <label className="mb-1 block text-sm font-medium text-slate-700">Agent (Optional)</label>

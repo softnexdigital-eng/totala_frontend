@@ -6,243 +6,654 @@ import {
   ArrowRight,
   Search,
   MapPin,
-  ChevronDown,
   Stethoscope,
-  Hospital,
-  FlaskConical,
-  Ambulance,
+  UserRound,
   Pill,
-  Droplets,
-  HouseHeart,
-  BadgePercent,
-  ShieldCheck,
-  Clock3,
-  Star,
+  Droplet,
+  FlaskConical,
+  Syringe,
+  Bandage,
+  HeartPulse,
+  FileText,
+  Car,
+  Siren,
+  Flame,
+  Ambulance,
   Phone,
-  CheckCircle2,
+  Clock3,
   Menu,
   X,
-  HeartPulse,
-  Activity,
+  ShieldCheck,
+  Megaphone,
+  Mail,
+  ShoppingCart,
+  CheckCircle2,
+  Heart,
+  Thermometer,
+  Newspaper,
   Users,
+  Navigation,
+  Video,
+  Star,
   Building2,
-  Sparkles,
-  CalendarCheck,
-  Car,
+  HeartHandshake,
+  BadgeCheck,
+  MessageCircle,
+  UserPlus,
+  CalendarDays,
+  ChevronRight,
+  type LucideIcon,
 } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import AgentCard from '@/components/booking/AgentCard';
 import BookNowModal from '@/components/booking/BookNowModal';
 import TransportBookingModal from '@/components/booking/TransportBookingModal';
-import type { AgentProfile } from '@/types';
+import SecurityShield from '@/components/security/SecurityShield';
+import { AgentCardSkeleton, DropdownSkeleton } from '@/components/ui/Skeleton';
+import type { AgentProfile, ServiceType } from '@/types';
 
-const services = [
-  {
-    title: 'ডাক্তার',
-    subtitle: 'বিশেষজ্ঞ ডাক্তার খুঁজুন',
-    icon: Stethoscope,
-    image:
-      'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&w=900&q=85',
-    href: '/doctors',
-  },
-  {
-    title: 'হাসপাতাল ও ক্লিনিক',
-    subtitle: 'কাছাকাছি হাসপাতাল দেখুন',
-    icon: Hospital,
-    image:
-      'https://images.unsplash.com/photo-1586773860418-d37222d8fce3?auto=format&fit=crop&w=900&q=85',
-    href: '/hospitals',
-  },
-  {
-    title: 'ডায়াগনস্টিক',
-    subtitle: 'টেস্ট ও ল্যাব খুঁজুন',
-    icon: FlaskConical,
-    image:
-      'https://images.unsplash.com/photo-1579154204601-01588f351e67?auto=format&fit=crop&w=900&q=85',
-    href: '/diagnostics',
-  },
-  {
-    title: 'যানবাহন বুকিং',
-    subtitle: 'অ্যাম্বুলেন্স, কার, সিএনজি সেবা',
-    icon: Car,
-    image:
-      'https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?auto=format&fit=crop&w=900&q=85',
-    href: '#transport',
-  },
-  {
-    title: 'ফার্মেসি',
-    subtitle: 'ফার্মেসির তথ্য খুঁজুন',
-    icon: Pill,
-    image:
-      'https://images.unsplash.com/photo-1585435557343-3b092031a831?auto=format&fit=crop&w=900&q=85',
-    href: '/pharmacies',
-  },
-  {
-    title: 'ব্লাড সার্ভিস',
-    subtitle: 'রক্ত সংক্রান্ত তথ্য',
-    icon: Droplets,
-    image:
-      'https://images.unsplash.com/photo-1615461066841-6116e61058f4?auto=format&fit=crop&w=900&q=85',
-    href: '/blood',
-  },
-  {
-    title: 'হোম হেলথকেয়ার',
-    subtitle: 'বাড়িতে স্বাস্থ্যসেবা',
-    icon: HouseHeart,
-    image:
-      'https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&w=900&q=85',
-    href: '/home-service',
-  },
-  {
-    title: 'প্যাকেজ ও অফার',
-    subtitle: 'স্বাস্থ্যসেবার সেরা অফার',
-    icon: BadgePercent,
-    image:
-      'https://images.unsplash.com/photo-1505751172876-fa1923c5c528?auto=format&fit=crop&w=900&q=85',
-    href: '/packages',
-  },
+/* =========================================================
+   CONSTANTS
+   Put your images in /public/images/ (names below). Any missing
+   image falls back to a soft green placeholder, never a broken icon.
+========================================================= */
+
+// Hero image: save it as /public/images/hero-bg.png
+const HERO_BG = '/images/hero-bg.png';
+const PREGNANT_MOTHER_IMG =
+  'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTN81imzCSGPN9B6PDUDIFkyP8SsqqMBlAzrIzVzC3ung&s=10';
+const FIRST_AID_BOX_IMG =
+  'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcStPEJuvpU9ugu3IKz_NQ5m6ui-zn69mSvzvlBmwTfjtQ&s=10';
+
+const BRAND = '#0b5d3b'; // dark green used for buttons / headings
+
+// ⚠️ Replace with your REAL hotline number before going live.
+const HOTLINE = { display: '+880 1300 000000', tel: '+8801300000000' };
+
+// Big action buttons shown right under the hero image.
+const HERO_ACTIONS = [
+  { key: 'doctor', label: 'ডাক্তার দেখান', sub: 'ভিডিও/ফোনে ডাক্তারের পরামর্শ', icon: Stethoscope, color: 'bg-emerald-600', service: 'ডাক্তার অ্যাপয়েন্টমেন্ট' },
+  { key: 'medicine', label: 'ওষুধ চাই', sub: 'প্রেসক্রিপশন অনুযায়ী ওষুধ সংগ্রহ', icon: Pill, color: 'bg-teal-600', service: 'ওষুধ সংগ্রহ' },
+  { key: 'ambulance', label: 'অ্যাম্বুলেন্স / পরিবহন', sub: 'রোগী নিয়ে যাওয়ার সহায়তা', icon: Ambulance, color: 'bg-rose-500', service: 'transport' },
+] as const;
+const MAP_EMBED =
+  'https://www.openstreetmap.org/export/embed.html?bbox=90.36%2C24.72%2C90.45%2C24.79&layer=mapnik&marker=24.7539%2C90.4073';
+const MAP_LINK =
+  'https://www.openstreetmap.org/?mlat=24.7539&mlon=90.4073#map=14/24.7539/90.4073';
+
+const NAV_LINKS = [
+  { label: 'হোম', href: '#top' },
+  { label: 'সেবা সমূহ', href: '#services' },
+  { label: 'অনলাইন ডাক্তার', href: '#online-doctor' },
+  { label: 'জরুরি সেবা', href: '#emergency' },
+  { label: 'স্বাস্থ্য টিপস', href: '#tips' },
+  { label: 'যোগাযোগ', href: '#contact' },
 ];
 
-const popularDoctors = [
-  {
-    name: 'Dr. Ahmed Rahman',
-    specialty: 'Medicine Specialist',
-    hospital: 'Popular Medical Center',
-    rating: '4.9',
-    image:
-      'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?auto=format&fit=crop&w=600&q=85',
-  },
-  {
-    name: 'Dr. Sarah Islam',
-    specialty: 'Gynecology Specialist',
-    hospital: 'City Hospital',
-    rating: '4.8',
-    image:
-      'https://images.unsplash.com/photo-1594824476967-48c8b964273f?auto=format&fit=crop&w=600&q=85',
-  },
-  {
-    name: 'Dr. Mahmud Hasan',
-    specialty: 'Cardiology Specialist',
-    hospital: 'Central Hospital',
-    rating: '4.9',
-    image:
-      'https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&w=600&q=85',
-  },
+type Tone = 'green' | 'blue' | 'red' | 'teal' | 'amber' | 'violet';
+
+const TONES: Record<Tone, { card: string; icon: string; arrow: string; badge: string }> = {
+  green: { card: 'border-emerald-100 bg-gradient-to-br from-emerald-50 to-white', icon: 'bg-emerald-600', arrow: 'text-emerald-700', badge: 'bg-emerald-100 text-emerald-700' },
+  blue: { card: 'border-sky-100 bg-gradient-to-br from-sky-50 to-white', icon: 'bg-sky-500', arrow: 'text-sky-700', badge: 'bg-sky-100 text-sky-700' },
+  red: { card: 'border-rose-100 bg-gradient-to-br from-rose-50 to-white', icon: 'bg-rose-500', arrow: 'text-rose-600', badge: 'bg-rose-100 text-rose-700' },
+  teal: { card: 'border-teal-100 bg-gradient-to-br from-teal-50 to-white', icon: 'bg-teal-600', arrow: 'text-teal-700', badge: 'bg-teal-100 text-teal-700' },
+  amber: { card: 'border-amber-100 bg-gradient-to-br from-amber-50 to-white', icon: 'bg-amber-500', arrow: 'text-amber-600', badge: 'bg-amber-100 text-amber-700' },
+  violet: { card: 'border-violet-100 bg-gradient-to-br from-violet-50 to-white', icon: 'bg-violet-600', arrow: 'text-violet-700', badge: 'bg-violet-100 text-violet-700' },
+};
+
+// `pos` = image focus point. Use 'object-top' when faces are near the top.
+const SERVICES = [
+  { title: 'ডাক্তার / চিকিৎসা', subtitle: 'অনলাইনে ডাক্তার পরামর্শ ও অ্যাপয়েন্টমেন্ট', icon: Stethoscope, tone: 'green' as Tone, image: '/images/subjects/doctor-consultation.jpg', badge: 'অনলাইন পরামর্শ', pos: 'object-top' },
+  { title: 'হাসপাতাল / ক্লিনিক', subtitle: 'হাসপাতাল, ক্লিনিক ও রোগী সহায়তা', icon: Building2, tone: 'blue' as Tone, image: '/images/subjects/hospital.jpg', badge: 'হাসপাতাল সহায়তা', pos: 'object-center' },
+  { title: 'ঔষধ / ফার্মেসি', subtitle: 'প্রেসক্রিপশন অনুযায়ী ওষুধ সংগ্রহ', icon: Pill, tone: 'green' as Tone, image: '/images/subjects/pharmacy.jpg', badge: 'ওষুধ সংগ্রহ', pos: 'object-center' },
+  { title: 'জরুরি সেবা', subtitle: 'জরুরি সময়ে দ্রুত সহায়তা ও যোগাযোগ', icon: Ambulance, tone: 'red' as Tone, image: '/images/subjects/emergency.jpg', badge: 'জরুরি সহায়তা', pos: 'object-center' },
+  { title: 'ডায়াগনস্টিক', subtitle: 'টেস্ট, ল্যাব ও রিপোর্ট সংগ্রহ', icon: FlaskConical, tone: 'violet' as Tone, image: '/images/subjects/diagnostic.jpg', badge: 'টেস্ট ও রিপোর্ট', pos: 'object-center' },
+  { title: 'রক্ত / ব্লাড ব্যাংক', subtitle: 'রক্ত সংগ্রহ ও প্রয়োজনীয় সমন্বয়', icon: Droplet, tone: 'red' as Tone, image: '/images/subjects/blood.jpg', badge: 'রক্ত সহায়তা', pos: 'object-center' },
+  { title: 'স্বাস্থ্যসেবা', subtitle: 'সালাইন, ইনজেকশন, ড্রেসিং ও BP চেক', icon: HeartPulse, tone: 'teal' as Tone, image: '/images/subjects/home-health.jpg', badge: 'হোম সার্ভিস', pos: 'object-center' },
+  { title: 'জরুরি পরিবহন', subtitle: 'রোগী পরিবহন ও হাসপাতালে যাওয়ার সহায়তা', icon: Car, tone: 'amber' as Tone, image: '/images/subjects/ambulance.jpg', badge: 'পরিবহন', pos: 'object-center' },
 ];
 
+/** Shape of a doctor returned by GET /api/public/doctors (serialized by the
+ *  backend `serializeDoctor`, which always exposes both the dashboard and the
+ *  mobile field spellings). */
+type OnlineDoctor = {
+  id: string;
+  name: string;
+  title?: string;
+  specialization?: string;
+  specialty?: string;
+  fee?: number | null;
+  consultationFee?: number | null;
+  hospital?: string;
+  chamber?: string;
+  visitingDays?: string;
+  visitingTime?: string;
+  profileImage?: string;
+  imageUrl?: string;
+  isActive?: boolean;
+  registrationStatus?: string;
+};
+
+const HEALTH_SUBJECTS = [
+  { title: 'মা ও নারী স্বাস্থ্য', desc: 'গর্ভাবস্থা, মাসিক, প্রসূতি ও নারী স্বাস্থ্য নিয়ে তথ্য ও পরামর্শ।', image: '/images/subjects/women-health.jpg', icon: Heart },
+  { title: 'শিশু স্বাস্থ্য', desc: 'শিশুর জ্বর, সর্দি-কাশি, পুষ্টি ও সাধারণ স্বাস্থ্য সম্পর্কে জানুন।', image: '/images/subjects/child-health.jpg', icon: UserRound },
+  { title: 'হৃদযন্ত্র ও রক্তচাপ', desc: 'হৃদস্বাস্থ্য, রক্তচাপ ও জীবনযাপন সম্পর্কে প্রাথমিক তথ্য।', image: '/images/subjects/heart-health.jpg', icon: HeartPulse },
+  { title: 'চর্ম ও সাধারণ স্বাস্থ্য', desc: 'ত্বক, দৈনন্দিন স্বাস্থ্য সমস্যা ও কখন চিকিৎসকের পরামর্শ নেবেন।', image: '/images/subjects/skin-health.jpg', icon: ShieldCheck },
+];
+
+const DISTINGUISHED_OPINIONS = [
+  { name: 'বিশিষ্ট ব্যক্তির নাম', role: 'সমাজসেবক / উদ্যোক্তা', text: 'মানুষের প্রয়োজনের সময়ে স্বাস্থ্যসেবার সঠিক পথ খুঁজে পেতে এমন একটি উদ্যোগ গুরুত্বপূর্ণ।', image: '/images/people/person-1.jpg' },
+  { name: 'বিশিষ্ট ব্যক্তির নাম', role: 'শিক্ষাবিদ / পেশাজীবী', text: 'স্থানীয় মানুষের জন্য প্রযুক্তির মাধ্যমে স্বাস্থ্যসেবা আরও সহজ করার উদ্যোগ প্রশংসনীয়।', image: '/images/people/person-2.jpg' },
+  { name: 'বিশিষ্ট ব্যক্তির নাম', role: 'জনপ্রতিনিধি / সমাজকর্মী', text: 'সঠিক তথ্য ও প্রয়োজনীয় সহায়তা মানুষকে দ্রুত সঠিক সেবার কাছে পৌঁছে দিতে পারে।', image: '/images/people/person-3.jpg' },
+];
+
+const DOCTOR_OPINIONS = [
+  { name: 'ডা. আপনার নাম', specialty: 'মেডিসিন বিশেষজ্ঞ', text: 'অনলাইন পরামর্শ রোগীকে প্রাথমিকভাবে সঠিক দিকনির্দেশনা দিতে এবং প্রয়োজন হলে দ্রুত চিকিৎসা নিতে সাহায্য করতে পারে।', image: '/images/doctors/doctor-4.jpg' },
+  { name: 'ডা. আপনার নাম', specialty: 'গাইনি ও প্রসূতি বিশেষজ্ঞ', text: 'বিশেষ করে ফলোআপ ও সাধারণ স্বাস্থ্য পরামর্শের ক্ষেত্রে অনলাইন consultation রোগীর জন্য সময় ও যাতায়াতের চাপ কমাতে পারে।', image: '/images/doctors/doctor-5.jpg' },
+  { name: 'ডা. আপনার নাম', specialty: 'শিশু রোগ বিশেষজ্ঞ', text: 'অভিভাবকরা শিশুর সাধারণ সমস্যায় প্রাথমিক পরামর্শ নিয়ে কখন সরাসরি চিকিৎসা প্রয়োজন তা বুঝতে পারেন।', image: '/images/doctors/doctor-6.jpg' },
+];
+
+/**
+ * Hub cards. To use your own photos, drop them in /public/images/hub/ and
+ * change the `image` paths.
+ */
+const HUB_SERVICES = [
+  { title: 'ডাক্তার বুকিং', desc: 'এজেন্ট আপনার হয়ে অনলাইনে ডাক্তার বুক করে দেন।', icon: Stethoscope, tone: 'green' as Tone, image: '/images/subjects/hub-doctor.jpg', pos: 'object-top', book: 'ডাক্তার অ্যাপয়েন্টমেন্ট' },
+  { title: 'অনলাইন পরামর্শে সহায়তা', desc: 'ফোন/ভিডিও কলে ডাক্তারের সাথে কথা বলতে পাশে থাকেন।', icon: Video, tone: 'blue' as Tone, image: '/images/subjects/emergency.jpg', pos: 'object-center', book: 'অনলাইন ডাক্তার' },
+  { title: 'ফুল অ্যাসিস্ট্যান্স', desc: 'ডাক্তার দেখানো থেকে ওষুধ ও রিপোর্ট পর্যন্ত পূর্ণ সহায়তা।', icon: HeartHandshake, tone: 'teal' as Tone, image: '/images/subjects/hub-assist.jpg', pos: 'object-center', book: 'ফুল অ্যাসিস্ট্যান্স' },
+  { title: 'অন্যান্য সেবা', desc: 'রক্ত সংগ্রহ, সালাইন, ইনজেকশন ও পেশেন্ট ট্রান্সপোর্ট।', icon: Ambulance, tone: 'amber' as Tone, image: '/images/subjects/hub-other.jpg', pos: 'object-center', book: 'অন্যান্য সেবা' },
+];
+
+const EMERGENCY = [
+  { name: 'পুলিশ (জরুরি)', number: '999', note: 'জাতীয় জরুরি সেবা', icon: ShieldCheck, color: 'bg-blue-900' },
+  { name: 'ফায়ার সার্ভিস (জরুরি)', number: '16163', note: 'ফায়ার সার্ভিস ও সিভিল ডিফেন্স', icon: Flame, color: 'bg-red-600' },
+  { name: 'অ্যাম্বুলেন্স (জরুরি)', number: '1990', note: 'জরুরি অ্যাম্বুলেন্স সেবা', icon: Ambulance, color: 'bg-blue-800' },
+  { name: 'স্বাস্থ্য বাতায়ন (হটলাইন)', number: '16263', note: 'স্বাস্থ্য সেবা ও পরামর্শ', icon: Phone, color: 'bg-emerald-600' },
+];
+
+const PREGNANCY_TIPS = [
+  'পর্যাপ্ত পানি পান করুন',
+  'নিয়মিত স্বাস্থ্য পরীক্ষা করুন',
+  'পুষ্টিকর খাবার গ্রহণ করুন',
+  'যেকোনো সমস্যা হলে ডাক্তারের পরামর্শ নিন',
+];
+
+const FIRST_AID_TIPS = [
+  { text: 'জ্বর হলে বিশ্রাম নিন ও পানি পান করুন', icon: Thermometer },
+  { text: 'কাটা-ছেঁড়ায় পরিষ্কার পানি দিয়ে ধুয়ে ব্যান্ডেজ করুন', icon: Bandage },
+  { text: 'পেট খারাপ হলে ORS পান করুন', icon: Droplet },
+  { text: 'হালকা মাথা ঘোরা/দুর্বলতায় বিশ্রাম নিন', icon: Heart },
+];
+
+const FIRST_AID_BOX = [
+  'নাপা (জ্বর/ব্যথার জন্য)',
+  'ব্যান্ডেজ ও গজ',
+  'ORS স্যালাইন',
+  'প্যারাসিটামল/অ্যান্টাসিড (সাধারণ)',
+  'ডিজিটাল থার্মোমিটার (ঐচ্ছিক)',
+];
+
+const NEWS = [
+  { title: 'গর্ভাবস্থায় পুষ্টি ও যত্ন: যা মনে রাখা দরকার', date: '২৩ সেপ্টেম্বর ২০২৬', tag: 'মাতৃস্বাস্থ্য', tagColor: 'bg-emerald-100 text-emerald-700', image: '/images/news-1.jpg' },
+  { title: 'ডেঙ্গু প্রতিরোধে করণীয় ও সতর্কতা', date: '২২ সেপ্টেম্বর ২০২৬', tag: 'সতর্কতা', tagColor: 'bg-rose-100 text-rose-700', image: '/images/news-2.jpg' },
+  { title: 'শিশু সর্দি-কাশি: ঘরে বসে প্রাথমিক যত্ন', date: '১৮ সেপ্টেম্বর ২০২৬', tag: 'শিশু স্বাস্থ্য', tagColor: 'bg-sky-100 text-sky-700', image: '/images/news-3.jpg' },
+  { title: 'সুস্থ থাকার জন্য দৈনন্দিন খাবার তালিকা', date: '১৫ সেপ্টেম্বর ২০২৬', tag: 'পুষ্টি ও স্বাস্থ্য', tagColor: 'bg-lime-100 text-lime-700', image: '/images/news-4.jpg' },
+  { title: 'বাড়িতে প্রসব পরবর্তী মায়ের যত্ন', date: '১০ সেপ্টেম্বর ২০২৬', tag: 'মাতৃস্বাস্থ্য', tagColor: 'bg-emerald-100 text-emerald-700', image: '/images/news-5.jpg' },
+];
+
+const ONLINE_STEPS = [
+  { title: 'সেবা বা ডাক্তার বাছুন', desc: 'সার্চ বার থেকে "ডাক্তার অ্যাপয়েন্টমেন্ট" সিলেক্ট করুন।', icon: Search },
+  { title: 'বুকিং রিকোয়েস্ট দিন', desc: 'নাম, ফোন নম্বর ও সমস্যার কথা লিখে রিকোয়েস্ট পাঠান।', icon: FileText },
+  { title: 'আমরা যোগাযোগ করব', desc: 'আমাদের টিম আপনাকে ফোন করে ডাক্তারের সময় নিশ্চিত করবে।', icon: Phone },
+  { title: 'ভিডিও/ফোনে পরামর্শ নিন', desc: 'নির্ধারিত সময়ে ঘরে বসেই ডাক্তারের সাথে কথা বলুন।', icon: Video },
+];
+
+// নমুনা তথ্য — আসল রিভিউ পেলে এগুলো বদলে দিন
+const DOCTOR_REVIEWS = [
+  { name: 'রহিমা বেগম', place: 'ত্রিশাল, ময়মনসিংহ', text: 'বাড়িতে বসেই ডাক্তারের সাথে কথা বলতে পেরেছি। সময় ও যাতায়াত দুটোই বেঁচেছে।', rating: 5 },
+  { name: 'আব্দুল করিম', place: 'ফুলবাড়িয়া, ময়মনসিংহ', text: 'অনলাইন পরামর্শ নেওয়ার প্রক্রিয়াটা সহজ ছিল এবং প্রয়োজনে টিম পাশে ছিল।', rating: 5 },
+  { name: 'সালমা খাতুন', place: 'গফরগাঁও, ময়মনসিংহ', text: 'ডাক্তার ধৈর্য নিয়ে সমস্যা শুনেছেন এবং পরবর্তী করণীয় বুঝিয়ে দিয়েছেন।', rating: 5 },
+];
+
+
+/* =========================================================
+   HELPERS
+========================================================= */
+
+/** Strip risky characters and cap the length of anything typed into search. */
+const sanitizeQuery = (value: string) =>
+  value.replace(/[<>{}[\]\\`$]/g, '').slice(0, 60);
+
+/** Hardened fetch: same-origin, must be OK + JSON, abortable. */
+async function fetchJson(url: string, signal: AbortSignal) {
+  const res = await fetch(url, {
+    cache: 'no-store',
+    credentials: 'same-origin',
+    headers: { Accept: 'application/json' },
+    signal,
+  });
+  if (!res.ok) throw new Error('request failed');
+  const type = res.headers.get('content-type') || '';
+  if (!type.includes('application/json')) throw new Error('unexpected response');
+  return res.json();
+}
+
+const isRecord = (v: unknown): v is Record<string, unknown> =>
+  typeof v === 'object' && v !== null;
+
+/** Image with shimmer while loading and a soft fallback if it fails. */
+function SafeImage({
+  src,
+  alt,
+  className = '',
+  sizes,
+  priority = false,
+  fallback,
+}: {
+  src: string;
+  alt: string;
+  className?: string;
+  sizes?: string;
+  priority?: boolean;
+  fallback?: React.ReactNode;
+}) {
+  const [state, setState] = useState<'loading' | 'ok' | 'error'>('loading');
+  const imgRef = useRef<HTMLImageElement>(null);
+
+  // Image may already be loaded before hydration (SSR + priority).
+  useEffect(() => {
+    const el = imgRef.current;
+    if (el && el.complete && el.naturalWidth > 0) setState('ok');
+  }, []);
+
+  if (state === 'error') {
+    return (
+      <>
+        {fallback ?? (
+          <div className="absolute inset-0 bg-gradient-to-br from-emerald-100 via-emerald-50 to-teal-100" />
+        )}
+      </>
+    );
+  }
+
+  return (
+    <>
+      {state === 'loading' && (
+        <div className="absolute inset-0 animate-pulse bg-slate-200/70" />
+      )}
+      <Image
+        ref={imgRef}
+        src={src}
+        alt={alt}
+        fill
+        sizes={sizes}
+        priority={priority}
+        draggable={false}
+        onLoad={() => setState('ok')}
+        onError={() => setState('error')}
+        className={`${className} transition-opacity duration-500 ${
+          state === 'ok' ? 'opacity-100' : 'opacity-0'
+        }`}
+      />
+    </>
+  );
+}
+
+/**
+ * OverlayCard — the whole card is the photo, so nothing looks cropped away into a
+ * thin strip. A dark gradient at the bottom keeps the white title + subtitle
+ * readable on any image (bright or dark). Used by both the "সেবা সমূহ" grid and
+ * the hub grid so they look consistent.
+ */
+function OverlayCard({
+  title,
+  subtitle,
+  image,
+  icon: Icon,
+  tone,
+  badge,
+  position = 'object-center',
+  onClick,
+}: {
+  title: string;
+  subtitle: string;
+  image: string;
+  icon: LucideIcon;
+  tone: Tone;
+  badge?: string;
+  position?: string;
+  onClick?: () => void;
+}) {
+  const t = TONES[tone];
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="group relative block aspect-[4/3] w-full overflow-hidden rounded-2xl bg-slate-200 text-left shadow-sm ring-1 ring-black/5 transition duration-300 hover:-translate-y-1 hover:shadow-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+    >
+      <SafeImage
+        src={image}
+        alt={title}
+        sizes="(max-width: 1024px) 50vw, 25vw"
+        className={`object-cover ${position} transition duration-500 group-hover:scale-105`}
+        fallback={
+          <div className={`absolute inset-0 flex items-center justify-center ${t.icon} text-white`}>
+            <Icon className="h-12 w-12 opacity-90" />
+          </div>
+        }
+      />
+
+      {/* readability gradient */}
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-transparent" />
+
+      {badge && (
+        <span
+          className={`absolute left-2.5 top-2.5 rounded-full px-2.5 py-1 text-[10px] font-bold text-white shadow-md sm:text-xs ${t.icon}`}
+        >
+          {badge}
+        </span>
+      )}
+
+      <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-2 p-3 sm:p-4">
+        <div className="min-w-0">
+          <h3 className="text-[15px] font-black leading-snug text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.65)] sm:text-base lg:text-lg">
+            {title}
+          </h3>
+          <p className="mt-0.5 line-clamp-2 text-[11px] leading-snug text-white/90 drop-shadow sm:text-xs">
+            {subtitle}
+          </p>
+        </div>
+        <span
+          className={`grid h-8 w-8 shrink-0 place-items-center rounded-full text-white shadow-lg sm:h-9 sm:w-9 ${t.icon}`}
+        >
+          <ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" />
+        </span>
+      </div>
+    </button>
+  );
+}
+
+/* =========================================================
+   PAGE
+========================================================= */
 export default function LandingPage() {
   const [mobileMenu, setMobileMenu] = useState(false);
   const [agents, setAgents] = useState<AgentProfile[]>([]);
   const [loadingAgents, setLoadingAgents] = useState(true);
-  const [selectedAgent, setSelectedAgent] = useState<AgentProfile | null>(null);
   const [transportVehicle, setTransportVehicle] = useState<string | null>(null);
 
+  // Search bar: service types shown in the dropdown. Selecting one opens the
+  // booking request modal (no agent selection from the landing page).
+  const [serviceTypes, setServiceTypes] = useState<ServiceType[]>([]);
+  const [loadingServiceTypes, setLoadingServiceTypes] = useState(true);
+  const [serviceQuery, setServiceQuery] = useState('');
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [bookingService, setBookingService] = useState<string | null>(null);
+  // Doctor picked in the "Online Doctors" section → forwarded to the modal.
+  const [bookingDoctor, setBookingDoctor] = useState<{ id: string; name: string } | null>(null);
+  const searchWrapRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Public agents
   useEffect(() => {
-    fetch('/api/public-agents', { cache: 'no-store' })
-      .then((res) => res.json())
+    const controller = new AbortController();
+    fetchJson('/api/public-agents', controller.signal)
       .then((data) => {
-        if (data.success) {
-          setAgents(data.data || []);
+        if (isRecord(data) && data.success && Array.isArray(data.data)) {
+          setAgents(
+            (data.data as unknown[]).filter(
+              (a): a is AgentProfile => isRecord(a) && a.id != null
+            )
+          );
         }
-        setLoadingAgents(false);
       })
-      .catch(() => {
-        setLoadingAgents(false);
+      .catch(() => {})
+      .finally(() => {
+        if (!controller.signal.aborted) setLoadingAgents(false);
       });
+    return () => controller.abort();
   }, []);
 
-  // Same filtering rule the public agents directory uses, so both views stay in sync.
+  // Active service types (public, no auth)
+  useEffect(() => {
+    const controller = new AbortController();
+    fetchJson('/api/public/service-types', controller.signal)
+      .then((data) => {
+        if (isRecord(data) && data.success && Array.isArray(data.data)) {
+          setServiceTypes(
+            (data.data as unknown[]).filter(
+              (s): s is ServiceType => isRecord(s) && s.id != null && typeof s.name === 'string'
+            )
+          );
+        }
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!controller.signal.aborted) setLoadingServiceTypes(false);
+      });
+    return () => controller.abort();
+  }, []);
+
+  // Online doctors shown in the "আজকের জন্য অনলাইন ডাক্তার" section.
+  // Live data from GET /api/public/doctors (active doctors only).
+  const [onlineDoctors, setOnlineDoctors] = useState<OnlineDoctor[]>([]);
+  const [loadingOnlineDoctors, setLoadingOnlineDoctors] = useState(true);
+  // The public API returns every active doctor (hundreds), so the section only
+  // renders the first few and lets the visitor reveal more.
+  const [visibleOnlineDoctors, setVisibleOnlineDoctors] = useState(6);
+  const ONLINE_DOCTORS_PAGE_SIZE = 6;
+
+  useEffect(() => {
+    const controller = new AbortController();
+    fetchJson('/api/public/doctors', controller.signal)
+      .then((data) => {
+        if (isRecord(data) && data.success && Array.isArray(data.data)) {
+          setOnlineDoctors(
+            (data.data as unknown[]).filter(
+              (d): d is OnlineDoctor =>
+                isRecord(d) &&
+                typeof d.id === 'string' &&
+                typeof d.name === 'string' &&
+                d.name.trim() !== '' &&
+                d.isActive !== false &&
+                // Only approved doctors are publicly bookable.
+                String(d.registrationStatus ?? 'APPROVED').toUpperCase() ===
+                  'APPROVED'
+            )
+          );
+        }
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!controller.signal.aborted) setLoadingOnlineDoctors(false);
+      });
+    return () => controller.abort();
+  }, []);
+
+  // Close the dropdown when clicking outside the search bar.
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        searchWrapRef.current &&
+        !searchWrapRef.current.contains(event.target as Node)
+      ) {
+        setDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   const activeAgents = agents.filter((agent) => agent.isActive !== false);
 
+  const filteredServices = serviceTypes.filter((service) =>
+    String(service.name ?? '')
+      .toLowerCase()
+      .includes(serviceQuery.trim().toLowerCase())
+  );
+
+  const openBooking = (name: string) => {
+    setServiceQuery(name);
+    setDropdownOpen(false);
+    setBookingService(name);
+    // A generic service booking must not carry over a previously picked doctor.
+    setBookingDoctor(null);
+  };
+
+  /** Open the booking modal for a specific doctor (Online Doctors section). */
+  const openDoctorBooking = (doctor: OnlineDoctor) => {
+    setServiceQuery('ডাক্তার অ্যাপয়েন্টমেন্ট');
+    setDropdownOpen(false);
+    setBookingService('ডাক্তার অ্যাপয়েন্টমেন্ট');
+    setBookingDoctor({ id: doctor.id, name: doctor.name });
+  };
+
+  /** Fee of a doctor — the API exposes it as `fee` and/or `consultationFee`. */
+  const doctorFee = (doctor: OnlineDoctor): number | null => {
+    const fee = Number(doctor.consultationFee ?? doctor.fee);
+    return Number.isFinite(fee) && fee > 0 ? fee : null;
+  };
+
+  /** Speciality label of a doctor — `specialization` or its `specialty` alias. */
+  const doctorSpecialty = (doctor: OnlineDoctor): string =>
+    (doctor.specialization || doctor.specialty || '').trim();
+
+  /**
+   * Profile image of a doctor. `next/image` refuses remote hosts that are not
+   * whitelisted in next.config.mjs, so only local paths and the allowed hosts
+   * are rendered — anything else falls back to the placeholder instead of
+   * throwing a "Invalid src prop" error.
+   */
+  const doctorImage = (doctor: OnlineDoctor): string | null => {
+    const raw = (doctor.profileImage || doctor.imageUrl || '').trim();
+    if (!raw) return null;
+    if (raw.startsWith('/')) return raw;
+    if (!/^https:\/\//i.test(raw)) return null;
+    try {
+      const { hostname } = new URL(raw);
+      const allowed = [
+        'res.cloudinary.com',
+        'images.unsplash.com',
+        'vromonguide.com',
+        'blogger.googleusercontent.com',
+        'encrypted-tbn0.gstatic.com',
+        // Doctor profile images are hosted on daktarinfo.com.
+        'daktarinfo.com',
+      ];
+      return allowed.includes(hostname) || hostname.endsWith('.daktarinfo.com')
+        ? raw
+        : null;
+    } catch {
+      return null;
+    }
+  };
+
+  // Search button: exact match opens the modal, otherwise reveal the dropdown.
+  const handleSearch = () => {
+    const exact = serviceTypes.find(
+      (service) =>
+        String(service.name).toLowerCase() === serviceQuery.trim().toLowerCase()
+    );
+    if (exact) {
+      setDropdownOpen(false);
+      setBookingService(exact.name);
+      return;
+    }
+    setDropdownOpen(true);
+  };
+
+  const focusSearch = () => {
+    setMobileMenu(false);
+    document.getElementById('top')?.scrollIntoView({ behavior: 'smooth' });
+    window.setTimeout(() => searchInputRef.current?.focus(), 350);
+  };
+
+  const handleServiceCard = (item: (typeof SERVICES)[number]) => {
+    if (item.title === 'জরুরি পরিবহন') {
+      setTransportVehicle('car');
+      return;
+    }
+    if (item.title === 'ডাক্তার / চিকিৎসা') {
+      openBooking('ডাক্তার অ্যাপয়েন্টমেন্ট');
+      return;
+    }
+    openBooking(item.title);
+  };
+
   return (
-    <main className="min-h-screen overflow-x-hidden bg-white text-slate-900">
+    <main
+      id="top"
+      className="min-h-screen overflow-x-clip bg-white text-slate-900"
+    >
+      <SecurityShield />
 
       {/* =========================================================
           NAVBAR
       ========================================================= */}
-      <header className="fixed left-0 right-0 top-0 z-50 border-b border-slate-200/70 bg-white/85 backdrop-blur-xl">
-        <div className="mx-auto flex h-[76px] max-w-7xl items-center justify-between px-5 sm:px-6 lg:px-8">
-
-          {/* Logo */}
-          <Link href="/" className="group flex items-center gap-3">
-            <div className="relative flex h-11 w-11 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-500 to-green-700 text-white shadow-lg shadow-emerald-600/20">
-              <HeartPulse className="h-6 w-6" strokeWidth={2.2} />
-              <div className="absolute inset-0 bg-white/10 opacity-0 transition group-hover:opacity-100" />
-            </div>
-
-            <div>
-              <div className="text-[23px] font-black tracking-tight text-slate-900">
-                Dak<span className="text-emerald-600">Din</span>
-              </div>
-              <div className="-mt-1 text-[8px] font-bold tracking-[0.28em] text-slate-400">
-                Sheba Nin
-              </div>
-            </div>
+      <header className="fixed left-0 right-0 top-0 z-50 border-b border-emerald-100/80 bg-white/90 shadow-sm backdrop-blur-xl">
+        <div className="mx-auto flex h-[84px] max-w-7.5xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
+          {/* Logo — large */}
+          <Link href="/" className="flex shrink-0 items-center" aria-label="DakDin হোম">
+            <Image
+              src="/dakdinlogo.png"
+              alt="Dakdin - ডাকদীন সেবা নিন"
+              width={243}
+              height={88}
+              priority
+              sizes="(max-width: 640px) 170px, 210px"
+              draggable={false}
+              className="h-[58px] w-auto object-contain sm:h-[68px]"
+            />
           </Link>
 
           {/* Desktop Navigation */}
-          <nav className="hidden items-center gap-8 lg:flex">
-            <a
-              href="#services"
-              className="text-sm font-semibold text-slate-600 transition hover:text-emerald-600"
-            >
-              সেবাসমূহ
-            </a>
-
-            <a
-              href="#doctors"
-              className="text-sm font-semibold text-slate-600 transition hover:text-emerald-600"
-            >
-              ডাক্তার
-            </a>
-
-            <Link
-              href="/public-agents"
-              className="text-sm font-semibold text-slate-600 transition hover:text-emerald-600"
-            >
-              Agents
-            </Link>
-
-            <a
-              href="#how"
-              className="text-sm font-semibold text-slate-600 transition hover:text-emerald-600"
-            >
-              কীভাবে কাজ করে
-            </a>
-
-            <a
-              href="#providers"
-              className="text-sm font-semibold text-slate-600 transition hover:text-emerald-600"
-            >
-              Provider
-            </a>
+          <nav className="hidden items-center gap-6 lg:flex" aria-label="প্রধান মেনু">
+            {NAV_LINKS.map((link, i) => (
+              <a
+                key={link.href}
+                href={link.href}
+                className={`relative py-2 text-[15px] font-semibold transition hover:text-emerald-700 ${
+                  i === 0 ? 'text-emerald-800' : 'text-slate-700'
+                }`}
+              >
+                {link.label}
+                {i === 0 && (
+                  <span className="absolute -bottom-1 left-0 right-0 h-[3px] rounded-full bg-emerald-600" />
+                )}
+              </a>
+            ))}
           </nav>
 
           {/* Right */}
-          <div className="flex items-center gap-3">
-            <Link
-              href="/login"
-              className="hidden rounded-xl px-4 py-2.5 text-sm font-bold text-slate-700 transition hover:bg-slate-50 sm:block"
+          <div className="flex items-center gap-2.5 sm:gap-3">
+            <button
+              type="button"
+              onClick={focusSearch}
+              aria-label="সেবা খুঁজুন"
+              className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 transition hover:border-emerald-300 hover:text-emerald-700"
             >
-              Login
-            </Link>
+              <Search className="h-5 w-5" />
+            </button>
+
+           
 
             <Link
-              href="/register"
-              className="hidden rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-slate-900/10 transition hover:bg-emerald-600 sm:block"
+              href="/login"
+              style={{ backgroundColor: BRAND }}
+              className="hidden items-center gap-2 rounded-full px-5 py-3 text-sm font-bold text-white shadow-lg shadow-emerald-900/20 transition hover:brightness-110 sm:flex"
             >
-              Join DakDin
+              <UserRound className="h-4 w-4" />
+              সাইন ইন / রেজিস্টার
             </Link>
 
             <button
+              type="button"
               onClick={() => setMobileMenu(!mobileMenu)}
-              className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 lg:hidden"
+              aria-label="মেনু"
+              aria-expanded={mobileMenu}
+              className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 lg:hidden"
             >
-              {mobileMenu ? (
-                <X className="h-5 w-5" />
-              ) : (
-                <Menu className="h-5 w-5" />
-              )}
+              {mobileMenu ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
           </div>
         </div>
@@ -250,1015 +661,1002 @@ export default function LandingPage() {
         {/* Mobile Menu */}
         {mobileMenu && (
           <div className="border-t border-slate-100 bg-white px-5 py-5 lg:hidden">
-            <div className="mx-auto flex max-w-7xl flex-col gap-4">
-              <a href="#services" onClick={() => setMobileMenu(false)}>
-                সেবাসমূহ
-              </a>
-              <a href="#doctors" onClick={() => setMobileMenu(false)}>
-                ডাক্তার
-              </a>
-              <Link href="/public-agents" onClick={() => setMobileMenu(false)}>
-                Agents
+            <div className="mx-auto flex max-w-7.5xl flex-col gap-1">
+              {NAV_LINKS.map((link) => (
+                <a
+                  key={link.href}
+                  href={link.href}
+                  onClick={() => setMobileMenu(false)}
+                  className="rounded-xl px-3 py-3 text-[15px] font-semibold text-slate-700 hover:bg-emerald-50"
+                >
+                  {link.label}
+                </a>
+              ))}
+              <Link
+                href="/login"
+                style={{ backgroundColor: BRAND }}
+                className="mt-3 flex items-center justify-center gap-2 rounded-full py-3.5 text-sm font-bold text-white"
+              >
+                <UserRound className="h-4 w-4" />
+                সাইন ইন / রেজিস্টার
               </Link>
-              <a href="#how" onClick={() => setMobileMenu(false)}>
-                কীভাবে কাজ করে
-              </a>
-              <a href="#providers" onClick={() => setMobileMenu(false)}>
-                Provider
-              </a>
-
-              <div className="flex gap-3 pt-2">
-                <Link
-                  href="/login"
-                  className="flex-1 rounded-xl border border-slate-200 py-3 text-center text-sm font-bold"
-                >
-                  Login
-                </Link>
-
-                <Link
-                  href="/register"
-                  className="flex-1 rounded-xl bg-emerald-600 py-3 text-center text-sm font-bold text-white"
-                >
-                  Join DakDin
-                </Link>
-              </div>
             </div>
           </div>
         )}
       </header>
 
-
       {/* =========================================================
-          HERO
+          HERO — full image, only the search bar on top
       ========================================================= */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-emerald-50 via-white to-green-50 pt-[76px]">
+      <section className="relative z-20 overflow-visible pt-[84px]">
+        <div className="relative h-[260px] w-full bg-emerald-50 sm:h-auto sm:aspect-[3/1]">
+          <SafeImage
+            src={HERO_BG}
+            alt="গ্রাম থেকে শহর — Dakdin সংযুক্ত স্বাস্থ্যসেবা"
+            priority
+            sizes="100vw"
+            className="object-cover object-center"
+            fallback={
+              <div className="absolute inset-0 bg-gradient-to-br from-emerald-100 to-sky-100" />
+            }
+          />
 
-        {/* Background decorations */}
-        <div className="absolute -left-32 top-32 h-96 w-96 rounded-full bg-emerald-200/30 blur-3xl" />
-        <div className="absolute -right-40 top-10 h-[500px] w-[500px] rounded-full bg-green-200/25 blur-3xl" />
-
-        <div className="relative mx-auto grid max-w-7xl items-center gap-14 px-5 py-16 sm:px-6 md:py-20 lg:grid-cols-[1.05fr_.95fr] lg:px-8 lg:py-28">
-
-          {/* Hero Content */}
-          <div>
-
-            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-white/80 px-4 py-2 shadow-sm backdrop-blur">
-              <Sparkles className="h-4 w-4 text-emerald-600" />
-              <span className="text-xs font-bold text-emerald-700 sm:text-sm">
-                আপনার স্বাস্থ্যসেবার তথ্য এক জায়গায়
-              </span>
+          {/* Search bar — bottom center, sits on the green wave */}
+          <div
+            ref={searchWrapRef}
+            className="absolute inset-x-0 bottom-4 z-30 mx-auto w-full max-w-2xl px-4 sm:bottom-[7%]"
+          >
+            <div className="flex items-center gap-2 rounded-full border border-white/60 bg-white p-1.5 pl-5 text-left shadow-2xl shadow-black/30">
+              <Search className="h-5 w-5 shrink-0 text-slate-400" />
+              <input
+                ref={searchInputRef}
+                type="text"
+                inputMode="search"
+                autoComplete="off"
+                maxLength={60}
+                value={serviceQuery}
+                onChange={(e) => {
+                  setServiceQuery(sanitizeQuery(e.target.value));
+                  setDropdownOpen(true);
+                }}
+                onFocus={() => setDropdownOpen(true)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleSearch();
+                  if (e.key === 'Escape') setDropdownOpen(false);
+                }}
+                placeholder="আপনার কী প্রয়োজন? ডাক্তার, হাসপাতাল, টেস্ট, ওষুধ খুঁজুন..."
+                aria-label="সেবা খুঁজুন"
+                className="w-full min-w-0 bg-transparent py-3 text-sm text-slate-800 outline-none placeholder:text-slate-400"
+              />
+              <button
+                type="button"
+                onClick={handleSearch}
+                aria-label="খুঁজুন"
+                style={{ backgroundColor: BRAND }}
+                className="flex h-12 w-14 shrink-0 items-center justify-center rounded-full text-white shadow-lg transition hover:brightness-110"
+              >
+                <Search className="h-5 w-5" />
+              </button>
             </div>
 
-            <h1 className="max-w-3xl text-4xl font-black leading-[1.08] tracking-tight text-slate-950 sm:text-5xl lg:text-[64px]">
-              প্রয়োজনীয় স্বাস্থ্যসেবা
-              <br />
-              <span className="bg-gradient-to-r from-emerald-600 via-green-600 to-teal-600 bg-clip-text text-transparent">
-                খুঁজে নিন সহজেই।
-              </span>
-            </h1>
-
-            <p className="mt-7 max-w-2xl text-base leading-8 text-slate-600 sm:text-lg">
-              ডাক্তার, হাসপাতাল, ক্লিনিক, ডায়াগনস্টিক, অ্যাম্বুলেন্স,
-              ফার্মেসি ও বিভিন্ন স্বাস্থ্যসেবার প্রয়োজনীয় তথ্য
-              একটি সহজ প্ল্যাটফর্মে খুঁজে নিন।
-            </p>
-
-
-            {/* Search */}
-            <div className="mt-9 max-w-2xl rounded-2xl border border-slate-200 bg-white p-2 shadow-xl shadow-slate-900/5">
-
-              <div className="flex flex-col gap-2 md:flex-row">
-
-                <div className="flex flex-1 items-center gap-3 rounded-xl bg-slate-50 px-4 py-3.5">
-                  <Search className="h-5 w-5 shrink-0 text-slate-400" />
-
-                  <input
-                    type="text"
-                    placeholder="ডাক্তার, হাসপাতাল, ডায়াগনস্টিক..."
-                    className="w-full bg-transparent text-sm outline-none placeholder:text-slate-400"
-                  />
-                </div>
-
-                <div className="flex items-center gap-2 rounded-xl bg-slate-50 px-4 py-3.5 md:w-40">
-                  <MapPin className="h-5 w-5 text-emerald-600" />
-
-                  <span className="text-sm text-slate-500">
-                    Location
-                  </span>
-
-                  <ChevronDown className="ml-auto h-4 w-4 text-slate-400" />
-                </div>
-
-                <button className="flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-emerald-600/20 transition hover:bg-emerald-700">
-                  <Search className="h-4 w-4" />
-                  Search
-                </button>
-
+            {/* Dropdown opens UPWARD so it never goes under other sections */}
+            {dropdownOpen && (
+              <div className="absolute inset-x-4 bottom-full z-40 mb-2 max-h-64 overflow-y-auto rounded-2xl border border-slate-200 bg-white text-left shadow-2xl">
+                {loadingServiceTypes ? (
+                  <DropdownSkeleton />
+                ) : filteredServices.length === 0 ? (
+                  <div className="px-4 py-4 text-sm text-slate-500">
+                    কোনো সার্ভিস টাইপ পাওয়া যায়নি
+                  </div>
+                ) : (
+                  filteredServices.map((service) => (
+                    <button
+                      key={service.id}
+                      type="button"
+                      onClick={() => openBooking(service.name)}
+                      className="flex w-full items-center gap-3 border-b border-slate-100 px-4 py-3 text-left transition last:border-b-0 hover:bg-emerald-50"
+                    >
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
+                        <Stethoscope className="h-4 w-4" />
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block truncate text-sm font-semibold text-slate-800">
+                          {service.name}
+                        </span>
+                        {service.description && (
+                          <span className="block truncate text-xs text-slate-500">
+                            {service.description}
+                          </span>
+                        )}
+                      </span>
+                      <ArrowRight className="ml-auto h-4 w-4 shrink-0 text-slate-400" />
+                    </button>
+                  ))
+                )}
               </div>
-            </div>
+            )}
+          </div>
+        </div>
 
-
-            {/* Trust */}
-            <div className="mt-7 flex flex-wrap gap-x-6 gap-y-3">
-
-              {[
-                'সহজে তথ্য খুঁজুন',
-                'দ্রুত যোগাযোগ',
-                'এক প্ল্যাটফর্মে',
-              ].map((item) => (
-                <div
-                  key={item}
-                  className="flex items-center gap-2 text-sm font-medium text-slate-500"
+        {/* Big action buttons + hotline */}
+        <div className="bg-white px-4 py-5 sm:px-6 lg:px-8">
+          <div className="mx-auto max-w-7.5xl">
+            <p className="mb-3 text-center text-sm font-bold text-slate-700">
+              আপনার কী প্রয়োজন? একটি বেছে নিন
+            </p>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              {HERO_ACTIONS.map(({ key, label, sub, icon: Icon, color, service }) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() =>
+                    service === 'transport' ? setTransportVehicle('car') : openBooking(service)
+                  }
+                  className="flex items-center gap-4 rounded-2xl border border-slate-100 bg-white p-4 text-left shadow-md transition hover:-translate-y-0.5 hover:shadow-xl"
                 >
-                  <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                  {item}
-                </div>
+                  <span className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-white ${color}`}>
+                    <Icon className="h-7 w-7" />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block text-base font-black text-slate-900">{label}</span>
+                    <span className="mt-0.5 block text-xs leading-4 text-slate-500">{sub}</span>
+                  </span>
+                  <ArrowRight className="ml-auto h-5 w-5 shrink-0 text-slate-400" />
+                </button>
               ))}
 
-            </div>
-
-          </div>
-
-
-          {/* Hero Visual */}
-          <div className="relative mx-auto w-full max-w-[550px]">
-
-            {/* Main Image */}
-            <div className="relative overflow-hidden rounded-[32px] border-8 border-white shadow-2xl shadow-emerald-900/10">
-
-              <div className="relative aspect-[4/4.5]">
-
-                <Image
-                  src="https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&w=1100&q=90"
-                  alt="Healthcare professional"
-                  fill
-                  priority
-                  className="object-cover"
-                  sizes="(max-width: 1024px) 90vw, 550px"
-                />
-
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/55 via-transparent to-transparent" />
-
-                {/* Image caption */}
-                <div className="absolute bottom-0 left-0 right-0 p-6 sm:p-8">
-
-                  <div className="flex items-center gap-3">
-
-                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/95 text-emerald-600 shadow-xl">
-                      <HeartPulse className="h-6 w-6" />
-                    </div>
-
-                    <div>
-                      <p className="text-sm font-bold text-white">
-                        Healthcare Information
-                      </p>
-
-                      <p className="mt-1 text-xs text-white/75">
-                        Find the care you need
-                      </p>
-                    </div>
-
-                  </div>
-
-                </div>
-
-              </div>
-            </div>
-
-
-            {/* Floating Card 1 */}
-            <div className="absolute -left-5 top-16 hidden rounded-2xl border border-white bg-white/95 p-4 shadow-2xl backdrop-blur sm:block">
-
-              <div className="flex items-center gap-3">
-
-                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-50">
-                  <Stethoscope className="h-5 w-5 text-emerald-600" />
-                </div>
-
-                <div>
-                  <div className="text-xs text-slate-400">
-                    Doctors
-                  </div>
-                  <div className="text-lg font-black">
-                    100+
-                  </div>
-                </div>
-
-              </div>
-
-            </div>
-
-
-            {/* Floating Card 2 */}
-            <div className="absolute -right-5 bottom-16 hidden rounded-2xl border border-white bg-white/95 p-4 shadow-2xl backdrop-blur sm:block">
-
-              <div className="flex items-center gap-3">
-
-                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-50">
-                  <Star className="h-5 w-5 fill-amber-400 text-amber-400" />
-                </div>
-
-                <div>
-                  <div className="text-xs text-slate-400">
-                    User Rating
-                  </div>
-                  <div className="text-lg font-black">
-                    4.9/5
-                  </div>
-                </div>
-
-              </div>
-
-            </div>
-
-          </div>
-
-        </div>
-      </section>
-
-
-      {/* =========================================================
-          STATS
-      ========================================================= */}
-      <section className="border-y border-slate-100 bg-white">
-
-        <div className="mx-auto grid max-w-6xl grid-cols-2 sm:grid-cols-4">
-
-          {[
-            [Users, '100+', 'ডাক্তার'],
-            [Building2, '50+', 'হাসপাতাল ও ক্লিনিক'],
-            [FlaskConical, '100+', 'ডায়াগনস্টিক সেবা'],
-            [Clock3, '24/7', 'তথ্য অ্যাক্সেস'],
-          ].map(([Icon, number, label]) => {
-
-            const StatIcon = Icon as any;
-
-            return (
-              <div
-                key={label as string}
-                className="border-r border-slate-100 px-4 py-8 text-center last:border-r-0"
+              <a
+                href={`tel:${HOTLINE.tel}`}
+                style={{ backgroundColor: BRAND }}
+                className="flex items-center gap-4 rounded-2xl p-4 text-white shadow-md transition hover:-translate-y-0.5 hover:shadow-xl"
               >
-                <StatIcon className="mx-auto mb-3 h-5 w-5 text-emerald-600" />
-
-                <div className="text-2xl font-black text-slate-900">
-                  {number as string}
-                </div>
-
-                <div className="mt-1 text-xs text-slate-500 sm:text-sm">
-                  {label as string}
-                </div>
-              </div>
-            );
-          })}
-
-        </div>
-
-      </section>
-
-
-      {/* =========================================================
-          SERVICES
-      ========================================================= */}
-      <section
-        id="services"
-        className="bg-slate-50 px-5 py-20 sm:px-6 lg:px-8 lg:py-28"
-      >
-
-        <div className="mx-auto max-w-7xl">
-
-          <div className="flex flex-col justify-between gap-5 md:flex-row md:items-end">
-
-            <div>
-              <div className="mb-3 flex items-center gap-2 text-sm font-black uppercase tracking-[0.18em] text-emerald-600">
-                <Activity className="h-4 w-4" />
-                Our Services
-              </div>
-
-              <h2 className="text-3xl font-black tracking-tight sm:text-4xl">
-                প্রয়োজনীয় সেবা,
-                <br />
-                <span className="text-emerald-600">
-                  এক জায়গায়।
+                <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/15">
+                  <Phone className="h-7 w-7" />
                 </span>
-              </h2>
-
-              <p className="mt-4 max-w-xl leading-7 text-slate-500">
-                আপনার প্রয়োজন অনুযায়ী স্বাস্থ্যসেবা ও
-                সেবাদানকারীর তথ্য সহজেই খুঁজে নিন।
-              </p>
+                <span className="min-w-0">
+                  <span className="block text-base font-black">সরাসরি ফোন করুন</span>
+                  <span className="mt-0.5 block text-lg font-black leading-5">{HOTLINE.display}</span>
+                  <span className="block text-[11px] text-emerald-100">সকাল ৯:০০ – রাত ৯:০০ (প্রতিদিন)</span>
+                </span>
+              </a>
             </div>
 
-            <Link
-              href="/services"
-              className="flex w-fit items-center gap-2 text-sm font-bold text-emerald-600 transition hover:gap-3"
-            >
-              সকল সেবা দেখুন
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-
-          </div>
-
-
-          {/* Service Cards */}
-          <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-
-            {services.map((service) => {
-
-              const Icon = service.icon;
-              const isTransport = service.href === '#transport';
-
-              if (isTransport) {
-                return (
-                  <button
-                    key={service.title}
-                    onClick={() => setTransportVehicle('car')}
-                    className="group overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm transition duration-500 hover:-translate-y-2 hover:shadow-2xl hover:shadow-slate-900/10 text-left"
-                  >
-                    <div className="relative aspect-[16/10] overflow-hidden">
-                      <Image
-                        src={service.image}
-                        alt={service.title}
-                        fill
-                        className="object-cover transition duration-700 group-hover:scale-110"
-                        sizes="(max-width: 768px) 100vw, 25vw"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-slate-950/5 to-transparent" />
-                      <div className="absolute left-4 top-4 flex h-11 w-11 items-center justify-center rounded-xl border border-white/30 bg-white/90 text-emerald-600 shadow-lg backdrop-blur">
-                        <Icon className="h-5 w-5" />
-                      </div>
-                      <div className="absolute bottom-4 left-4 right-4 text-white">
-                        <div className="text-lg font-black">{service.title}</div>
-                        <div className="mt-1 text-xs text-white/75">{service.subtitle}</div>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between p-5">
-                      <span className="text-sm font-bold text-slate-700">বুক করুন</span>
-                      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-50 transition group-hover:bg-emerald-600 group-hover:text-white">
-                        <ArrowRight className="h-4 w-4" />
-                      </div>
-                    </div>
-                  </button>
-                );
-              }
-
-              return (
-                <Link
-                  href={service.href}
-                  key={service.title}
-                  className="group overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm transition duration-500 hover:-translate-y-2 hover:shadow-2xl hover:shadow-slate-900/10"
-                >
-                  <div className="relative aspect-[16/10] overflow-hidden">
-                    <Image
-                      src={service.image}
-                      alt={service.title}
-                      fill
-                      className="object-cover transition duration-700 group-hover:scale-110"
-                      sizes="(max-width: 768px) 100vw, 25vw"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-slate-950/5 to-transparent" />
-                    <div className="absolute left-4 top-4 flex h-11 w-11 items-center justify-center rounded-xl border border-white/30 bg-white/90 text-emerald-600 shadow-lg backdrop-blur">
-                      <Icon className="h-5 w-5" />
-                    </div>
-                    <div className="absolute bottom-4 left-4 right-4 text-white">
-                      <div className="text-lg font-black">{service.title}</div>
-                      <div className="mt-1 text-xs text-white/75">{service.subtitle}</div>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between p-5">
-                    <span className="text-sm font-bold text-slate-700">বিস্তারিত দেখুন</span>
-                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-50 transition group-hover:bg-emerald-600 group-hover:text-white">
-                      <ArrowRight className="h-4 w-4" />
-                    </div>
-                  </div>
-                </Link>
-              );
-            })}
-
-          </div>
-
-        </div>
-      </section>
-
-
-      {/* =========================================================
-          WHY DAKDIN
-      ========================================================= */}
-      <section className="px-5 py-20 sm:px-6 lg:px-8 lg:py-28">
-
-        <div className="mx-auto grid max-w-7xl items-center gap-14 lg:grid-cols-2">
-
-          {/* Image */}
-          <div className="relative">
-
-            <div className="relative overflow-hidden rounded-[32px] shadow-2xl">
-
-              <Image
-                src="https://images.unsplash.com/photo-1584982751601-97dcc096659c?auto=format&fit=crop&w=1200&q=90"
-                alt="Healthcare"
-                width={1200}
-                height={900}
-                className="h-[450px] w-full object-cover"
-              />
-
-              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 to-transparent" />
-
-              <div className="absolute bottom-6 left-6 rounded-2xl border border-white/20 bg-white/15 p-5 text-white backdrop-blur-xl">
-
-                <div className="flex items-center gap-3">
-
-                  <ShieldCheck className="h-8 w-8" />
-
-                  <div>
-                    <div className="font-bold">
-                      Information First
-                    </div>
-
-                    <div className="mt-1 text-xs text-white/70">
-                      সহজে প্রয়োজনীয় তথ্য খুঁজুন
-                    </div>
-                  </div>
-
-                </div>
-
-              </div>
-
-            </div>
-
-          </div>
-
-
-          {/* Content */}
-          <div>
-
-            <div className="flex items-center gap-2 text-sm font-black uppercase tracking-[0.18em] text-emerald-600">
-              <HeartPulse className="h-4 w-4" />
-              Why DakDin
-            </div>
-
-            <h2 className="mt-4 text-3xl font-black leading-tight sm:text-4xl">
-              স্বাস্থ্যসেবার তথ্য খোঁজা
-              <br />
-              <span className="text-emerald-600">
-                আরও সহজ হোক।
-              </span>
-            </h2>
-
-            <p className="mt-5 leading-8 text-slate-500">
-              DakDin তৈরি করা হয়েছে যেন প্রয়োজনের সময়
-              সঠিক স্বাস্থ্যসেবার তথ্য খুঁজে পেতে আপনাকে
-              বিভিন্ন জায়গায় ঘুরতে না হয়।
+            <p className="mt-3 text-center text-xs text-slate-500">
+              রিকোয়েস্ট দেওয়ার পর আমাদের টিম আপনাকে ফোন করে নিশ্চিত করবে।
             </p>
-
-
-            <div className="mt-8 space-y-5">
-
-              {[
-                [
-                  Search,
-                  'সহজ Search',
-                  'একটি search থেকেই আপনার প্রয়োজনীয় সেবা খুঁজে নিন।',
-                ],
-                [
-                  MapPin,
-                  'Location Based',
-                  'আপনার পছন্দের এলাকার সেবা ও প্রতিষ্ঠান খুঁজুন।',
-                ],
-                [
-                  ShieldCheck,
-                  'তথ্যভিত্তিক প্ল্যাটফর্ম',
-                  'সেবাদানকারীদের প্রয়োজনীয় তথ্য এক জায়গায় দেখুন।',
-                ],
-                [
-                  Phone,
-                  'দ্রুত যোগাযোগ',
-                  'প্রয়োজন অনুযায়ী সংশ্লিষ্ট সেবাদানকারীর সাথে যোগাযোগ করুন।',
-                ],
-              ].map(([Icon, title, text]) => {
-
-                const FeatureIcon = Icon as any;
-
-                return (
-                  <div key={title as string} className="flex gap-4">
-
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
-                      <FeatureIcon className="h-5 w-5" />
-                    </div>
-
-                    <div>
-                      <h3 className="font-bold">
-                        {title as string}
-                      </h3>
-
-                      <p className="mt-1 text-sm leading-6 text-slate-500">
-                        {text as string}
-                      </p>
-                    </div>
-
-                  </div>
-                );
-              })}
-
-            </div>
-
           </div>
-
         </div>
       </section>
 
-
       {/* =========================================================
-          DOCTORS
+          SERVICE DIRECTORY — FULL-IMAGE CARDS
       ========================================================= */}
-      <section
-        id="doctors"
-        className="bg-slate-950 px-5 py-20 text-white sm:px-6 lg:px-8 lg:py-28"
-      >
-
-        <div className="mx-auto max-w-7xl">
-
-          <div className="flex flex-col justify-between gap-5 md:flex-row md:items-end">
-
+      <section id="services" className="px-4 pb-10 pt-12 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7.5xl">
+          <div className="flex items-end justify-between gap-4">
             <div>
-
-              <div className="flex items-center gap-2 text-sm font-bold uppercase tracking-[0.18em] text-emerald-400">
-                <Stethoscope className="h-4 w-4" />
-                Find Doctors
-              </div>
-
-              <h2 className="mt-4 text-3xl font-black sm:text-4xl">
-                বিশেষজ্ঞ ডাক্তার
-                <br />
-                <span className="text-emerald-400">
-                  খুঁজে নিন।
+              <h2 className="flex items-center gap-2 text-2xl font-black text-slate-900">
+                <span className="grid h-9 w-9 place-items-center rounded-xl bg-emerald-50 text-emerald-600">
+                  <HeartHandshake className="h-5 w-5" />
                 </span>
+                সেবা সমূহ (বিষয়ভিত্তিক)
               </h2>
-
+              <p className="mt-1 text-sm text-slate-500">আপনার প্রয়োজন অনুযায়ী বিষয় বেছে —Dakdin থেকে পরামর্শ, বুকিং বা প্রয়োজনীয় সহায়তা নিন।</p>
             </div>
-
-            <Link
-              href="/doctors"
-              className="flex w-fit items-center gap-2 text-sm font-bold text-emerald-400"
-            >
-              সকল ডাক্তার
-              <ArrowRight className="h-4 w-4" />
+            <Link href="/services" className="hidden shrink-0 items-center gap-1.5 text-sm font-bold text-emerald-700 sm:flex">
+              সব সেবা দেখুন <ArrowRight className="h-4 w-4" />
             </Link>
-
           </div>
 
-
-          <div className="mt-12 grid gap-5 md:grid-cols-3">
-
-            {popularDoctors.map((doctor) => (
-
-              <div
-                key={doctor.name}
-                className="overflow-hidden rounded-3xl border border-white/10 bg-white/[0.06] backdrop-blur"
-              >
-
-                <div className="relative aspect-[4/3]">
-
-                  <Image
-                    src={doctor.image}
-                    alt={doctor.name}
-                    fill
-                    className="object-cover"
-                    sizes="(max-width: 768px) 100vw, 33vw"
-                  />
-
-                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent" />
-
-                  <div className="absolute bottom-4 left-4 flex items-center gap-2 rounded-lg bg-white/15 px-3 py-1.5 text-xs font-bold backdrop-blur">
-                    <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
-                    {doctor.rating}
-                  </div>
-
-                </div>
-
-
-                <div className="p-5">
-
-                  <h3 className="font-bold">
-                    {doctor.name}
-                  </h3>
-
-                  <p className="mt-1 text-sm text-emerald-400">
-                    {doctor.specialty}
-                  </p>
-
-                  <p className="mt-2 text-xs text-slate-400">
-                    {doctor.hospital}
-                  </p>
-
-                  <Link
-                    href="/doctors"
-                    className="mt-5 flex items-center justify-center gap-2 rounded-xl border border-white/10 py-3 text-sm font-bold transition hover:bg-emerald-600"
-                  >
-                    Profile দেখুন
-                    <ArrowRight className="h-4 w-4" />
-                  </Link>
-
-                </div>
-
-              </div>
-
+          <div className="mt-6 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+            {SERVICES.map((item) => (
+              <OverlayCard
+                key={item.title}
+                title={item.title}
+                subtitle={item.subtitle}
+                image={item.image}
+                icon={item.icon}
+                tone={item.tone}
+                badge={item.badge}
+                position={item.pos}
+                onClick={() => handleServiceCard(item)}
+              />
             ))}
-
           </div>
-
         </div>
       </section>
 
+      {/* =========================================================
+          ONLINE DOCTOR CONSULTANCY — PRIMARY BUSINESS
+      ========================================================= */}
+      <section id="online-doctor" className="bg-slate-50/70 px-4 py-14 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7.5xl">
+          <div className="grid gap-8 lg:grid-cols-[1.05fr_1.95fr] lg:items-center">
+            <div>
+              <span className="inline-flex items-center gap-2 rounded-full bg-emerald-100 px-3 py-1.5 text-xs font-bold text-emerald-800">
+                <Video className="h-4 w-4" /> মূল সেবা
+              </span>
+              <h2 className="mt-4 text-3xl font-black leading-tight text-slate-900 sm:text-4xl">ঘরে বসেই অনলাইনে<br /><span className="text-emerald-700">ডাক্তারের পরামর্শ নিন</span></h2>
+              <p className="mt-4 max-w-xl text-sm leading-7 text-slate-600">আপনার সমস্যা জানান, উপযুক্ত বিভাগ নির্বাচন করুন এবং নির্ধারিত সময়ে ভিডিও বা ফোনে চিকিৎসকের সাথে কথা বলুন। প্রয়োজন হলে Dakdin-এর সহায়তাও নিতে পারবেন।</p>
+              <div className="mt-6 flex flex-wrap gap-3">
+                <button type="button" onClick={() => openBooking('ডাক্তার অ্যাপয়েন্টমেন্ট')} style={{ backgroundColor: BRAND }} className="inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-bold text-white shadow-lg transition hover:brightness-110">
+                  <CalendarDays className="h-4 w-4" /> ডাক্তার দেখান
+                </button>
+                <Link href="/doctors" className="inline-flex items-center gap-2 rounded-full border border-emerald-600 bg-white px-6 py-3 text-sm font-bold text-emerald-700 transition hover:bg-emerald-50">
+                  সব ডাক্তার দেখুন <ArrowRight className="h-4 w-4" />
+                </Link>
+              </div>
+              <div className="mt-7 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                {ONLINE_STEPS.map(({ title, icon: Icon }, i) => (
+                  <div key={title} className="rounded-2xl border border-emerald-100 bg-white p-3 shadow-sm">
+                    <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700"><Icon className="h-4 w-4" /></span>
+                    <p className="mt-2 text-[11px] font-bold leading-4 text-slate-800"><span className="text-emerald-600">{i + 1}. </span>{title}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <div className="mb-4 flex items-center justify-between">
+                <div>
+                  <h3 className="text-xl font-black text-slate-900">আজকের জন্য অনলাইন ডাক্তার</h3>
+                  <p className="mt-1 text-xs text-slate-500">ডেমো তথ্য—verified doctor profile যুক্ত হলে এখান থেকে live data দেখান।</p>
+                </div>
+                <span className="hidden rounded-full bg-emerald-100 px-3 py-1.5 text-xs font-bold text-emerald-700 sm:inline-flex">● Online consultation</span>
+              </div>
+              <div className="grid gap-4 md:grid-cols-3">
+                {loadingOnlineDoctors &&
+                  [0, 1, 2].map((i) => (
+                    <div key={`doctor-skeleton-${i}`} className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm">
+                      <div className="h-44 animate-pulse bg-slate-200/70" />
+                      <div className="space-y-2 p-4">
+                        <div className="h-4 w-2/3 animate-pulse rounded bg-slate-200" />
+                        <div className="h-3 w-1/2 animate-pulse rounded bg-slate-200" />
+                        <div className="h-3 w-1/3 animate-pulse rounded bg-slate-200" />
+                      </div>
+                    </div>
+                  ))}
+
+                {!loadingOnlineDoctors && onlineDoctors.length === 0 && (
+                  <div className="md:col-span-3 rounded-2xl border border-dashed border-emerald-200 bg-white p-8 text-center">
+                    <Stethoscope className="mx-auto h-10 w-10 text-emerald-500" />
+                    <p className="mt-3 text-sm font-bold text-slate-800">
+                      এখনো কোনো অনলাইন ডাক্তার যোগ করা হয়নি
+                    </p>
+                    <p className="mt-1 text-xs text-slate-500">
+                      আপনার বুকিং রিকোয়েস্ট দিলে আমাদের টিম সঠিক ডাক্তারের সাথে যোগাযোগ করাবে।
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => openBooking('ডাক্তার অ্যাপয়েন্টমেন্ট')}
+                      style={{ backgroundColor: BRAND }}
+                      className="mt-4 inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-xs font-bold text-white transition hover:brightness-110"
+                    >
+                      <CalendarDays className="h-4 w-4" /> বুকিং রিকোয়েস্ট দিন
+                    </button>
+                  </div>
+                )}
+
+                {onlineDoctors.slice(0, visibleOnlineDoctors).map((doctor) => {
+                  const image = doctorImage(doctor);
+                  const fee = doctorFee(doctor);
+                  const specialty = doctorSpecialty(doctor);
+                  return (
+                    <div key={doctor.id} className="group overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-xl">
+                      <div className="relative h-44 bg-emerald-50">
+                        {image ? (
+                          <SafeImage src={image} alt={doctor.name} sizes="(max-width: 768px) 100vw, 33vw" className="object-cover object-top transition duration-500 group-hover:scale-105"
+                            fallback={<div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-emerald-100 to-sky-50 text-emerald-700"><Stethoscope className="h-16 w-16" /></div>} />
+                        ) : (
+                          <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-emerald-100 to-sky-50 text-emerald-700">
+                            <Stethoscope className="h-16 w-16" />
+                          </div>
+                        )}
+                        <span className="absolute left-3 top-3 rounded-full bg-white/95 px-2.5 py-1 text-[10px] font-bold text-emerald-700 shadow-sm">● Available</span>
+                      </div>
+                      <div className="p-4">
+                        <h4 className="text-[15px] font-black text-slate-900">{doctor.name}</h4>
+                        {specialty && <p className="mt-0.5 text-xs font-semibold text-emerald-700">{specialty}</p>}
+                        {(doctor.title || doctor.hospital) && (
+                          <p className="mt-1 text-[11px] text-slate-500">
+                            {[doctor.title, doctor.hospital].filter(Boolean).join(' • ')}
+                          </p>
+                        )}
+                        <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3">
+                          <span className="text-sm font-black text-slate-900">
+                            {fee !== null ? `৳ ${fee}` : 'ফি জানতে কল করুন'}
+                          </span>
+                          <button type="button" onClick={() => openDoctorBooking(doctor)} className="rounded-full bg-emerald-700 px-3.5 py-2 text-[11px] font-bold text-white transition hover:bg-emerald-800">পরামর্শ নিন</button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {!loadingOnlineDoctors && onlineDoctors.length > visibleOnlineDoctors && (
+                <div className="mt-6 flex justify-center">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setVisibleOnlineDoctors((v) => v + ONLINE_DOCTORS_PAGE_SIZE)
+                    }
+                    className="inline-flex items-center gap-2 rounded-full border border-emerald-600 px-5 py-2.5 text-xs font-bold text-emerald-700 transition hover:bg-emerald-600 hover:text-white"
+                  >
+                    আরও ডাক্তার দেখুন
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* =========================================================
-          OUR AGENTS
+          PATIENT REVIEWS
       ========================================================= */}
-      <section className="bg-slate-50 px-5 py-20 sm:px-6 lg:px-8 lg:py-28">
-        <div className="mx-auto max-w-7xl">
-          <div className="flex flex-col justify-between gap-5 md:flex-row md:items-end">
-            <div>
-              <div className="mb-3 flex items-center gap-2 text-sm font-black uppercase tracking-[0.18em] text-emerald-600">
-                <Users className="h-4 w-4" />
-                Our Agents
+      <section className="bg-emerald-50/50 px-4 py-12 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7.5xl">
+          <h2 className="flex items-center gap-2 text-xl font-black text-slate-900">
+            <MessageCircle className="h-5 w-5 text-emerald-600" />
+            রোগীদের মতামত
+          </h2>
+          <div className="mt-6 grid gap-4 md:grid-cols-3">
+            {DOCTOR_REVIEWS.map((r) => (
+              <div
+                key={r.name}
+                className="rounded-2xl border border-white bg-white p-5 shadow-sm"
+              >
+                <div className="flex gap-0.5">
+                  {[1, 2, 3, 4, 5].map((n) => (
+                    <Star
+                      key={n}
+                      className={`h-4 w-4 ${
+                        n <= r.rating ? 'fill-amber-400 text-amber-400' : 'text-slate-200'
+                      }`}
+                    />
+                  ))}
+                </div>
+                <p className="mt-3 text-sm leading-6 text-slate-700">“{r.text}”</p>
+                <div className="mt-4 flex items-center gap-3">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-100 text-sm font-black text-emerald-700">
+                    {r.name.charAt(0)}
+                  </span>
+                  <div>
+                    <p className="text-xs font-bold text-slate-800">{r.name}</p>
+                    <p className="text-[11px] text-slate-400">{r.place}</p>
+                  </div>
+                </div>
               </div>
-              <h2 className="text-3xl font-black tracking-tight sm:text-4xl">
-                আপনার সেবার জন্য
-                <br />
-                <span className="text-emerald-600">
-                  নির্দেশিত এজেন্ট।
-                </span>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* =========================================================
+          HEALTH SUBJECTS — IMAGE FIRST
+      ========================================================= */}
+      <section className="px-4 py-12 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7.5xl">
+          <div className="flex items-end justify-between gap-4">
+            <div>
+              <h2 className="flex items-center gap-2 text-2xl font-black text-slate-900"><HeartPulse className="h-6 w-6 text-emerald-600" /> স্বাস্থ্য বিষয়ভিত্তিক তথ্য</h2>
+              <p className="mt-1 text-sm text-slate-500">বিভিন্ন স্বাস্থ্য বিষয় সম্পর্কে সহজ ভাষায় তথ্য, সচেতনতা ও কখন চিকিৎসকের পরামর্শ নেবেন তা জানুন।</p>
+            </div>
+            <Link href="/health-tips" className="hidden items-center gap-1 text-sm font-bold text-emerald-700 sm:flex">সব বিষয় দেখুন <ArrowRight className="h-4 w-4" /></Link>
+          </div>
+          <div className="mt-6 grid gap-4 md:grid-cols-2">
+            {HEALTH_SUBJECTS.map(({ title, desc, image, icon: Icon }) => (
+              <Link href="/health-tips" key={title} className="group grid overflow-hidden rounded-3xl border border-slate-100 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-xl sm:grid-cols-[180px_1fr]">
+                <div className="relative min-h-[150px] bg-emerald-50">
+                  <SafeImage src={image} alt={title} sizes="180px" className="object-cover transition duration-500 group-hover:scale-105" fallback={<div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-emerald-100 to-teal-50 text-emerald-600"><Icon className="h-12 w-12" /></div>} />
+                </div>
+                <div className="p-5">
+                  <span className="grid h-9 w-9 place-items-center rounded-xl bg-emerald-50 text-emerald-700"><Icon className="h-5 w-5" /></span>
+                  <h3 className="mt-3 text-lg font-black text-slate-900">{title}</h3>
+                  <p className="mt-1 text-xs leading-5 text-slate-500">{desc}</p>
+                  <span className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-emerald-700">আরও জানুন <ChevronRight className="h-4 w-4" /></span>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* =========================================================
+          DOCTOR + DISTINGUISHED OPINIONS
+      ========================================================= */}
+      <section className="bg-slate-50/70 px-4 py-12 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7.5xl">
+          <div className="grid gap-8 lg:grid-cols-2">
+            <div>
+              <div className="flex items-end justify-between gap-3">
+                <div>
+                  <h2 className="flex items-center gap-2 text-xl font-black text-slate-900"><Stethoscope className="h-5 w-5 text-emerald-600" /> চিকিৎসকদের মতামত</h2>
+                  <p className="mt-1 text-xs text-slate-500">স্বাস্থ্যসেবা ও অনলাইন consultation নিয়ে চিকিৎসকদের বক্তব্য।</p>
+                </div>
+              </div>
+              <div className="mt-5 space-y-3">
+                {DOCTOR_OPINIONS.map((item, idx) => (
+                  <div key={item.name + item.specialty + idx} className="flex gap-4 rounded-2xl border border-emerald-100 bg-white p-4 shadow-sm">
+                    <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-2xl bg-emerald-50">
+                      <SafeImage src={item.image} alt={item.name} sizes="64px" className="object-cover object-top" fallback={<div className="absolute inset-0 flex items-center justify-center bg-emerald-100 text-emerald-700"><Stethoscope className="h-7 w-7" /></div>} />
+                    </div>
+                    <div>
+                      <p className="text-sm font-black text-slate-900">{item.name}</p>
+                      <p className="text-[11px] font-semibold text-emerald-700">{item.specialty}</p>
+                      <p className="mt-1.5 text-xs leading-5 text-slate-600">“{item.text}”</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <h2 className="flex items-center gap-2 text-xl font-black text-slate-900"><Star className="h-5 w-5 text-amber-500" /> বিশিষ্ট ব্যক্তিদের মতামত</h2>
+              <p className="mt-1 text-xs text-slate-500">Dakdin-এর উদ্যোগ সম্পর্কে সমাজের বিভিন্ন ক্ষেত্রের মানুষের বক্তব্য।</p>
+              <div className="mt-5 space-y-3">
+                {DISTINGUISHED_OPINIONS.map((item, idx) => (
+                  <div key={item.name + item.role + idx} className="flex gap-4 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+                    <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-full bg-slate-100">
+                      <SafeImage src={item.image} alt={item.name} sizes="64px" className="object-cover" fallback={<div className="absolute inset-0 flex items-center justify-center bg-slate-100 text-slate-500"><Users className="h-7 w-7" /></div>} />
+                    </div>
+                    <div>
+                      <p className="text-sm font-black text-slate-900">{item.name}</p>
+                      <p className="text-[11px] font-semibold text-slate-500">{item.role}</p>
+                      <p className="mt-1.5 text-xs leading-5 text-slate-600">“{item.text}”</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* =========================================================
+          HUB + AGENT SERVICE — FULL-IMAGE CARDS
+      ========================================================= */}
+      <section className="px-4 py-12 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7.5xl">
+          <div className="text-center">
+            <h2 className="flex items-center justify-center gap-2 text-2xl font-black text-slate-900">
+              <Building2 className="h-6 w-6 text-emerald-600" />
+              আপনার এলাকার হাব, আপনার পাশের এজেন্ট
+            </h2>
+            <p className="mx-auto mt-2 max-w-3xl text-sm leading-6 text-slate-500">
+              ময়মনসিংহের বিভিন্ন এলাকায় আমাদের হাব আছে। গ্রামের রোগীরা সরাসরি হাবে গিয়ে বা এজেন্টকে ফোন করে
+              সহজে ডাক্তার দেখাতে পারেন — অনলাইন ডাক্তার বুকিং থেকে শুরু করে পূর্ণ সহায়তা পর্যন্ত সবকিছু এজেন্ট করে দেন।
+            </p>
+          </div>
+
+          <div className="mt-8 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+            {HUB_SERVICES.map((item) => (
+              <OverlayCard
+                key={item.title}
+                title={item.title}
+                subtitle={item.desc}
+                image={item.image}
+                icon={item.icon}
+                tone={item.tone}
+                position={item.pos}
+                onClick={() => openBooking(item.book)}
+              />
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* =========================================================
+          OUR AGENTS (compact cards + registration CTAs)
+      ========================================================= */}
+      <section className="bg-slate-50 px-4 py-12 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7.5xl">
+          <div className="flex flex-col justify-between gap-3 md:flex-row md:items-end">
+            <div>
+              <h2 className="flex items-center gap-2 text-xl font-black text-slate-900">
+                <Users className="h-5 w-5 text-emerald-600" />
+                আমাদের এজেন্ট
               </h2>
-              <p className="mt-4 max-w-xl leading-7 text-slate-500">
-                আমাদের অত্যন্ত সুনিয়ন্ত্রিত এবং রেটিংযুক্ত এজেন্ট সেবা নিশ্চিত করুন
+              <p className="mt-1 max-w-2xl text-xs leading-5 text-slate-500">
+                সার্চ বার থেকে সার্ভিস সিলেক্ট করে বুকিং রিকোয়েস্ট করুন; সুপার অ্যাডমিন এজেন্ট অ্যাসাইন করবেন।
               </p>
             </div>
             <Link
               href="/public-agents"
-              className="flex w-fit items-center gap-2 text-sm font-bold text-emerald-600 transition hover:gap-3"
+              className="flex w-fit items-center gap-1.5 text-sm font-bold text-emerald-700"
             >
-              সকল এজেন্ট দেখুন
-              <ArrowRight className="h-4 w-4" />
+              সকল এজেন্ট দেখুন <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
 
-          <div className="mt-12 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {/* Compact cards: 2 cols on small, 6 cols on large */}
+          <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
             {loadingAgents ? (
-              <div className="col-span-full text-center py-12">
-                <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-emerald-600 border-r-transparent"></div>
-              </div>
+              [0, 1, 2, 3, 4, 5].map((i) => <AgentCardSkeleton key={i} />)
             ) : activeAgents.length === 0 ? (
-              <div className="col-span-full text-center py-12 text-slate-500">
-                No agents available at the moment
+              <div className="col-span-full py-8 text-center text-sm text-slate-500">
+                এই মুহূর্তে কোনো এজেন্ট পাওয়া যায়নি
               </div>
             ) : (
-              activeAgents.map((agent) => (
-                <AgentCard
-                  key={agent.id}
-                  agent={agent}
-                  onBookNow={setSelectedAgent}
-                />
-              ))
+              activeAgents.slice(0, 6).map((agent) => {
+                // Adjust these field names to match your real AgentProfile type.
+                const a = agent as unknown as Record<string, unknown>;
+                const name = String(a.name ?? a.fullName ?? 'এজেন্ট');
+                const area = String(a.area ?? a.location ?? a.upazila ?? '');
+                return (
+                  <div
+                    key={agent.id}
+                    className="flex flex-col items-center rounded-2xl border border-slate-100 bg-white p-3 text-center shadow-sm transition hover:shadow-md"
+                  >
+                    <span className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-lg font-black text-emerald-700">
+                      {name.charAt(0)}
+                    </span>
+                    <p className="mt-2 line-clamp-1 text-xs font-bold text-slate-800">{name}</p>
+                    {area && (
+                      <p className="mt-0.5 flex items-center gap-1 text-[10px] text-slate-400">
+                        <MapPin className="h-3 w-3" />
+                        <span className="line-clamp-1">{area}</span>
+                      </p>
+                    )}
+                    <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
+                      <BadgeCheck className="h-3 w-3" />
+                      যাচাইকৃত
+                    </span>
+                  </div>
+                );
+              })
             )}
           </div>
-        </div>
-      </section>
 
-
-      {/* =========================================================
-          HOW IT WORKS
-      ========================================================= */}
-      <section
-        id="how"
-        className="px-5 py-20 sm:px-6 lg:px-8 lg:py-28"
-      >
-
-        <div className="mx-auto max-w-6xl text-center">
-
-          <div className="text-sm font-black uppercase tracking-[0.18em] text-emerald-600">
-            Simple Process
-          </div>
-
-          <h2 className="mt-4 text-3xl font-black sm:text-4xl">
-            DakDin ব্যবহার করবেন যেভাবে
-          </h2>
-
-          <p className="mx-auto mt-4 max-w-xl leading-7 text-slate-500">
-            কয়েকটি সহজ ধাপে আপনার প্রয়োজনীয় স্বাস্থ্যসেবার
-            তথ্য খুঁজে নিন।
-          </p>
-
-
-          <div className="mt-14 grid gap-10 md:grid-cols-3">
-
-            {[
-              [
-                '01',
-                Search,
-                'খুঁজুন',
-                'ডাক্তার, হাসপাতাল, ডায়াগনস্টিক বা আপনার প্রয়োজনীয় সেবা খুঁজুন।',
-              ],
-              [
-                '02',
-                CalendarCheck,
-                'তথ্য দেখুন',
-                'সেবাদানকারীর প্রোফাইল, সেবা, location ও যোগাযোগের তথ্য দেখুন।',
-              ],
-              [
-                '03',
-                Phone,
-                'যোগাযোগ করুন',
-                'প্রয়োজন অনুযায়ী সরাসরি সংশ্লিষ্ট সেবাদানকারীর সাথে যোগাযোগ করুন।',
-              ],
-            ].map(([number, Icon, title, text]) => {
-
-              const StepIcon = Icon as any;
-
-              return (
-                <div key={number as string} className="relative">
-
-                  <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-emerald-50 text-emerald-600">
-                    <StepIcon className="h-8 w-8" />
-                  </div>
-
-                  <div className="mt-5 text-xs font-black tracking-widest text-emerald-600">
-                    STEP {number as string}
-                  </div>
-
-                  <h3 className="mt-2 text-xl font-black">
-                    {title as string}
-                  </h3>
-
-                  <p className="mx-auto mt-3 max-w-xs text-sm leading-7 text-slate-500">
-                    {text as string}
-                  </p>
-
-                </div>
-              );
-            })}
-
-          </div>
-
-        </div>
-      </section>
-
-
-      {/* =========================================================
-          PROVIDER CTA
-      ========================================================= */}
-      <section
-        id="providers"
-        className="px-5 pb-20 sm:px-6 lg:px-8 lg:pb-28"
-      >
-
-        <div className="mx-auto max-w-7xl overflow-hidden rounded-[36px] bg-gradient-to-br from-emerald-600 via-green-600 to-teal-700">
-
-          <div className="grid items-center lg:grid-cols-2">
-
-            <div className="px-7 py-14 sm:px-10 lg:px-16 lg:py-20">
-
-              <div className="flex items-center gap-2 text-sm font-bold uppercase tracking-[0.18em] text-emerald-100">
-                <Building2 className="h-4 w-4" />
-                For Healthcare Providers
+          {/* Registration CTAs */}
+          <div className="mt-8 grid gap-4 md:grid-cols-2">
+            <div className="flex items-center gap-4 rounded-2xl border border-emerald-200 bg-white p-5 shadow-sm">
+              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white">
+                <UserPlus className="h-6 w-6" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <h3 className="text-sm font-black text-slate-900">এজেন্ট হিসেবে যুক্ত হোন</h3>
+                <p className="mt-0.5 text-xs leading-5 text-slate-500">
+                  অভিজ্ঞ ও দক্ষ ব্যক্তিরা রেজিস্ট্রেশন করে নিজ এলাকায় সেবা দিন ও আয় করুন।
+                </p>
               </div>
-
-              <h2 className="mt-5 text-3xl font-black leading-tight text-white sm:text-4xl">
-                আপনার স্বাস্থ্যসেবা
-                <br />
-                আরও মানুষের কাছে পৌঁছান।
-              </h2>
-
-              <p className="mt-5 max-w-xl leading-7 text-emerald-50">
-                ডাক্তার, হাসপাতাল, ক্লিনিক, ডায়াগনস্টিক বা
-                অন্য কোনো স্বাস্থ্যসেবা প্রদানকারী হিসেবে
-                DakDin-এ আপনার তথ্য যুক্ত করুন।
-              </p>
-
-              <div className="mt-7 flex flex-col gap-3 sm:flex-row">
-
-                <Link
-                  href="/provider"
-                  className="flex items-center justify-center gap-2 rounded-xl bg-white px-6 py-3.5 text-sm font-black text-emerald-700 shadow-xl transition hover:bg-emerald-50"
-                >
-                  আপনার প্রতিষ্ঠান যুক্ত করুন
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-
-                <Link
-                  href="/provider"
-                  className="flex items-center justify-center rounded-xl border border-white/25 px-6 py-3.5 text-sm font-bold text-white transition hover:bg-white/10"
-                >
-                  Learn More
-                </Link>
-
-              </div>
-
+              <Link
+                href="/register?role=agent"
+                style={{ backgroundColor: BRAND }}
+                className="shrink-0 rounded-full px-4 py-2.5 text-xs font-bold text-white shadow-md transition hover:brightness-110"
+              >
+                রেজিস্ট্রেশন
+              </Link>
             </div>
 
-
-            <div className="relative hidden min-h-[430px] lg:block">
-
-              <Image
-                src="https://images.unsplash.com/photo-1579684385127-1ef15d508118?auto=format&fit=crop&w=1100&q=90"
-                alt="Healthcare provider"
-                fill
-                className="object-cover"
-                sizes="50vw"
-              />
-
-              <div className="absolute inset-0 bg-gradient-to-r from-emerald-600 via-emerald-600/20 to-transparent" />
-
-              <div className="absolute bottom-10 right-10 rounded-2xl border border-white/20 bg-white/15 p-5 text-white backdrop-blur-xl">
-
-                <div className="flex items-center gap-3">
-
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white text-emerald-600">
-                    <Users className="h-6 w-6" />
-                  </div>
-
-                  <div>
-                    <div className="font-bold">
-                      Grow with DakDin
-                    </div>
-
-                    <div className="mt-1 text-xs text-white/75">
-                      Reach more people
-                    </div>
-                  </div>
-
-                </div>
-
+            <div className="flex items-center gap-4 rounded-2xl border border-sky-200 bg-white p-5 shadow-sm">
+              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-sky-500 text-white">
+                <Stethoscope className="h-6 w-6" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <h3 className="text-sm font-black text-slate-900">ডাক্তার হিসেবে যুক্ত হোন</h3>
+                <p className="mt-0.5 text-xs leading-5 text-slate-500">
+                  অনলাইন পরামর্শ দিতে আগ্রহী ডাক্তাররা আমাদের প্ল্যাটফর্মে রেজিস্ট্রেশন করুন।
+                </p>
               </div>
-
+              <Link
+                href="/register?role=doctor"
+                className="shrink-0 rounded-full bg-sky-600 px-4 py-2.5 text-xs font-bold text-white shadow-md transition hover:brightness-110"
+              >
+                রেজিস্ট্রেশন
+              </Link>
             </div>
-
           </div>
-
         </div>
-
       </section>
 
-
       {/* =========================================================
-          FINAL CTA
+          HEALTH TIPS
       ========================================================= */}
-      <section className="px-5 pb-20 text-center sm:px-6 lg:px-8">
+      <section id="tips" className="px-4 py-6 sm:px-6 lg:px-8">
+        <div className="mx-auto grid max-w-7.5xl gap-5 lg:grid-cols-[.85fr_1.4fr]">
+          {/* Pregnancy tips */}
+          <div className="relative overflow-hidden rounded-3xl border border-emerald-100 bg-gradient-to-br from-emerald-50 to-white p-5">
+            <h2 className="flex items-center gap-2 text-lg font-black text-emerald-800">
+              <Heart className="h-5 w-5 fill-emerald-600 text-emerald-600" />
+              গর্ভবতী মায়েদের জন্য বিশেষ টিপস
+            </h2>
+            <p className="mt-0.5 text-xs text-slate-500">সুস্থ মা, সুস্থ শিশু – একটি নিরাপদ আগামী</p>
 
-        <div className="mx-auto max-w-3xl">
-
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600">
-            <HeartPulse className="h-8 w-8" />
-          </div>
-
-          <h2 className="mt-6 text-3xl font-black sm:text-4xl">
-            প্রয়োজনের সময়
-            <span className="text-emerald-600"> DakDin</span>
-            -এর সাথে থাকুন।
-          </h2>
-
-          <p className="mx-auto mt-4 max-w-xl leading-7 text-slate-500">
-            প্রয়োজনীয় স্বাস্থ্যসেবার তথ্য খুঁজে পাওয়া হোক
-            আরও সহজ, দ্রুত ও সুবিধাজনক।
-          </p>
-
-          <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
+            <div className="mt-4 grid grid-cols-[120px_1fr] items-center gap-3 sm:grid-cols-[150px_1fr]">
+              <div className="relative h-52 overflow-hidden rounded-2xl bg-emerald-100">
+                <SafeImage
+                  src={PREGNANT_MOTHER_IMG}
+                  alt="গর্ভবতী মা"
+                  sizes="150px"
+                  className="object-cover"
+                />
+              </div>
+              <ul className="space-y-3">
+                {PREGNANCY_TIPS.map((tip) => (
+                  <li key={tip} className="flex gap-2 text-xs leading-5 text-slate-700">
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+                    {tip}
+                  </li>
+                ))}
+              </ul>
+            </div>
 
             <Link
-              href="/doctors"
-              className="flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-7 py-3.5 text-sm font-bold text-white shadow-lg shadow-emerald-600/20 transition hover:bg-emerald-700"
+              href="/health-tips"
+              style={{ backgroundColor: BRAND }}
+              className="mt-4 inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-xs font-bold text-white shadow-md transition hover:brightness-110"
             >
-              ডাক্তার খুঁজুন
+              আরও টিপস পড়ুন
+              <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+          </div>
+
+          {/* First aid tips + box */}
+          <div className="grid gap-5 rounded-3xl border border-sky-100 bg-gradient-to-br from-sky-50/70 to-white p-5 md:grid-cols-[1fr_1fr]">
+            <div>
+              <h2 className="flex items-center gap-2 text-lg font-black text-sky-800">
+                <Bandage className="h-5 w-5" />
+                প্রাথমিক চিকিৎসা টিপস
+              </h2>
+              <p className="mt-0.5 text-xs text-slate-500">
+                ছোটখাটো সমস্যায় ঘরেই নিন প্রাথমিক ব্যবস্থা
+              </p>
+              <ul className="mt-4 space-y-3.5">
+                {FIRST_AID_TIPS.map(({ text, icon: Icon }) => (
+                  <li key={text} className="flex items-start gap-3 text-xs leading-5 text-slate-700">
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-sky-100 text-sky-700">
+                      <Icon className="h-3.5 w-3.5" />
+                    </span>
+                    {text}
+                  </li>
+                ))}
+              </ul>
+              <Link
+                href="/health-tips"
+                style={{ backgroundColor: BRAND }}
+                className="mt-5 inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-xs font-bold text-white shadow-md transition hover:brightness-110"
+              >
+                সব টিপস দেখুন
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
+            </div>
+
+            <div className="rounded-2xl border border-white bg-white/80 p-4 shadow-sm">
+              <h3 className="flex items-center gap-2 text-sm font-black text-emerald-800">
+                <ShieldCheck className="h-4 w-4" />
+                প্রাথমিক চিকিৎসা কম্বো বক্স
+              </h3>
+              <div className="mt-3 grid grid-cols-[110px_1fr] gap-3">
+                <div className="relative h-32 overflow-hidden rounded-xl bg-emerald-50">
+                  <SafeImage
+                    src={FIRST_AID_BOX_IMG}
+                    alt="DakDin First Aid Combo Box"
+                    sizes="110px"
+                    className="object-contain p-1"
+                    fallback={
+                      <div className="absolute inset-0 flex items-center justify-center bg-emerald-600 text-white">
+                        <Heart className="h-10 w-10 fill-white" />
+                      </div>
+                    }
+                  />
+                </div>
+                <ul className="space-y-1.5">
+                  {FIRST_AID_BOX.map((item) => (
+                    <li key={item} className="flex gap-1.5 text-[11px] leading-4 text-slate-600">
+                      <CheckCircle2 className="mt-px h-3.5 w-3.5 shrink-0 text-emerald-600" />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="mt-4 flex items-center justify-between">
+                <p className="text-2xl font-black text-slate-900">৳ 499</p>
+                <Link
+                  href="/first-aid-box"
+                  style={{ backgroundColor: BRAND }}
+                  className="inline-flex items-center gap-2 rounded-full px-4 py-2.5 text-xs font-bold text-white shadow-md transition hover:brightness-110"
+                >
+                  এখনই কিনুন
+                  <ShoppingCart className="h-3.5 w-3.5" />
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* =========================================================
+          NEWS & HEALTH UPDATES
+      ========================================================= */}
+      <section className="px-4 py-8 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7.5xl">
+          <div className="flex items-center justify-between">
+            <h2 className="flex items-center gap-2 text-xl font-black text-slate-900">
+              <Megaphone className="h-5 w-5 text-emerald-600" />
+              সর্বশেষ খবর ও হেলথ আপডেট
+            </h2>
+            <Link
+              href="/news"
+              className="flex items-center gap-1.5 text-sm font-bold text-emerald-700"
+            >
+              সব দেখুন
               <ArrowRight className="h-4 w-4" />
             </Link>
-
-            <Link
-              href="/services"
-              className="rounded-xl border border-slate-200 px-7 py-3.5 text-sm font-bold text-slate-700 transition hover:border-emerald-300 hover:text-emerald-600"
-            >
-              সকল সেবা
-            </Link>
-
           </div>
 
+          <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+            {NEWS.map((item) => (
+              <Link
+                key={item.title}
+                href="/news"
+                className="group flex gap-3 rounded-2xl border border-slate-100 bg-white p-2.5 shadow-sm transition hover:shadow-lg lg:flex-col lg:p-0"
+              >
+                <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-emerald-50 lg:h-32 lg:w-full lg:rounded-b-none">
+                  <SafeImage
+                    src={item.image}
+                    alt={item.title}
+                    sizes="(max-width: 1024px) 96px, 20vw"
+                    className="object-cover transition duration-500 group-hover:scale-105"
+                    fallback={
+                      <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-emerald-100 to-teal-50 text-emerald-600">
+                        <Newspaper className="h-8 w-8" />
+                      </div>
+                    }
+                  />
+                </div>
+                <div className="min-w-0 lg:p-3">
+                  <h3 className="line-clamp-3 text-[13px] font-bold leading-5 text-slate-800">
+                    {item.title}
+                  </h3>
+                  <p className="mt-1.5 text-[11px] text-slate-400">{item.date}</p>
+                  <span
+                    className={`mt-2 inline-block rounded-md px-2 py-0.5 text-[10px] font-bold ${item.tagColor}`}
+                  >
+                    {item.tag}
+                  </span>
+                </div>
+              </Link>
+            ))}
+          </div>
         </div>
-
       </section>
 
+      {/* =========================================================
+          EMERGENCY + LOCATION (just above footer)
+      ========================================================= */}
+      <section id="emergency" className="px-4 py-10 sm:px-6 lg:px-8">
+        <div className="mx-auto grid max-w-7.5xl gap-5 lg:grid-cols-[1fr_1.05fr]">
+          {/* Emergency contacts */}
+          <div className="rounded-3xl border border-rose-100 bg-rose-50/70 p-5">
+            <h2 className="flex items-center gap-2 text-lg font-black text-rose-600">
+              <Siren className="h-5 w-5" />
+              জরুরি যোগাযোগ
+            </h2>
+            <p className="mt-0.5 text-xs text-slate-500">জরুরি প্রয়োজনে দ্রুত যোগাযোগ করুন</p>
+
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              {EMERGENCY.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <a
+                    key={item.number}
+                    href={`tel:${item.number}`}
+                    className="flex items-center gap-3 rounded-2xl border border-white bg-white p-3.5 shadow-sm transition hover:shadow-md"
+                  >
+                    <span
+                      className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-white ${item.color}`}
+                    >
+                      <Icon className="h-6 w-6" />
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block truncate text-xs font-semibold text-slate-700">
+                        {item.name}
+                      </span>
+                      <span className="block text-2xl font-black leading-tight text-slate-900">
+                        {item.number}
+                      </span>
+                      <span className="block truncate text-[11px] text-slate-500">
+                        {item.note}
+                      </span>
+                    </span>
+                  </a>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Location */}
+          <div
+            id="about"
+            className="rounded-3xl border border-emerald-100 bg-emerald-50/60 p-5"
+          >
+            <h2 className="flex items-center gap-2 text-lg font-black text-emerald-800">
+              <MapPin className="h-5 w-5" />
+              আমাদের অবস্থান
+            </h2>
+            <p className="mt-0.5 text-xs text-slate-500">
+              ময়মনসিংহ জেলার সকল ইউনিয়নে আমরা সেবা দিচ্ছি।
+            </p>
+
+            <div className="mt-4 grid gap-3 sm:grid-cols-[1.1fr_1fr]">
+              <div className="relative h-52 overflow-hidden rounded-2xl border border-white bg-slate-100 shadow-sm sm:h-auto sm:min-h-[220px]">
+                <iframe
+                  title="ডাকদিন কার্যালয়ের মানচিত্র"
+                  src={MAP_EMBED}
+                  loading="lazy"
+                  referrerPolicy="no-referrer"
+                  sandbox="allow-scripts allow-same-origin"
+                  className="absolute inset-0 h-full w-full border-0"
+                />
+              </div>
+
+              <div className="flex flex-col gap-3 rounded-2xl bg-white p-4 shadow-sm">
+                <div className="flex gap-2.5">
+                  <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+                  <div>
+                    <p className="text-xs font-bold text-slate-800">ঠিকানা</p>
+                    <p className="mt-0.5 text-xs leading-5 text-slate-600">
+                      ডাকদিন (কেন্দ্রীয় কার্যালয়)
+                      <br />
+                      ময়মনসিংহ, বাংলাদেশ
+                    </p>
+                  </div>
+                </div>
+                <div className="flex gap-2.5">
+                  <Clock3 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+                  <div>
+                    <p className="text-xs font-bold text-slate-800">অফিস সময়</p>
+                    <p className="mt-0.5 text-xs leading-5 text-slate-600">
+                      সকাল ৯:০০ – রাত ৯:০০
+                      <br />
+                      (প্রতিদিন)
+                    </p>
+                  </div>
+                </div>
+                <a
+                  href={MAP_LINK}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-auto flex items-center justify-center gap-2 rounded-xl border border-emerald-600 py-2.5 text-xs font-bold text-emerald-700 transition hover:bg-emerald-600 hover:text-white"
+                >
+                  <Navigation className="h-3.5 w-3.5" />
+                  ওপেন ম্যাপে দেখুন
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* =========================================================
           FOOTER
       ========================================================= */}
-      <footer className="bg-slate-950 px-5 py-14 text-slate-400 sm:px-6 lg:px-8">
-
-        <div className="mx-auto grid max-w-7xl gap-10 md:grid-cols-4">
-
+      <footer
+        id="contact"
+        className="px-4 pb-24 pt-12 text-emerald-50/80 sm:px-6 sm:pb-6 lg:px-8"
+        style={{ backgroundColor: '#0a4030' }}
+      >
+        <div className="mx-auto grid max-w-7.5xl gap-10 md:grid-cols-[1.3fr_1.2fr_.7fr_.8fr_1.1fr]">
           {/* Brand */}
-          <div className="md:col-span-2">
-
-            <Link href="/" className="inline-flex items-center gap-3">
-
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-600 text-white">
-                <HeartPulse className="h-6 w-6" />
-              </div>
-
-              <div>
-                <div className="text-2xl font-black text-white">
-                  Dak<span className="text-emerald-400">Din</span>
-                </div>
-                <div className="text-[8px] font-bold tracking-[0.28em] text-slate-500">
-                  HEALTH & SERVICES
-                </div>
-              </div>
-
-            </Link>
-
-            <p className="mt-5 max-w-md text-sm leading-7">
-              প্রয়োজনীয় স্বাস্থ্যসেবার তথ্য সহজে খুঁজে
-              পাওয়ার একটি আধুনিক ডিজিটাল প্ল্যাটফর্ম।
-            </p>
-
-          </div>
-
-
-          {/* Links */}
           <div>
-
-            <h4 className="font-bold text-white">
-              Explore
-            </h4>
-
-            <div className="mt-5 space-y-3 text-sm">
-
-              <Link href="/doctors" className="block hover:text-white">
-                ডাক্তার
-              </Link>
-
-              <Link href="/hospitals" className="block hover:text-white">
-                হাসপাতাল
-              </Link>
-
-              <Link href="/diagnostics" className="block hover:text-white">
-                ডায়াগনস্টিক
-              </Link>
-
-              <Link href="/services" className="block hover:text-white">
-                সকল সেবা
-              </Link>
-
-            </div>
-
+            <Link
+              href="/"
+              className="inline-block rounded-2xl bg-white px-4 py-2.5 shadow-lg"
+              aria-label="DakDin হোম"
+            >
+              <Image
+                src="/dakdinlogo.png"
+                alt="Dakdin - ডাকদীন সেবা নিন"
+                width={243}
+                height={88}
+                sizes="170px"
+                draggable={false}
+                className="h-12 w-auto object-contain"
+              />
+            </Link>
           </div>
 
+          <div className="border-emerald-100/15 md:border-l md:pl-8">
+            <p className="text-lg font-bold leading-snug text-white">
+              সুস্থ সমাজ, সুখী পরিবার
+              <br />
+              ডাকদিন সবসময় আপনার পাশে
+            </p>
+          </div>
+
+          {/* Quick links */}
+          <div>
+            <h4 className="font-bold text-white">দ্রুত লিংক</h4>
+            <div className="mt-4 space-y-2.5 text-sm">
+              <a href="#top" className="block hover:text-white">হোম</a>
+              <a href="#services" className="block hover:text-white">সেবা সমূহ</a>
+              <a href="#online-doctor" className="block hover:text-white">অনলাইন ডাক্তার</a>
+              <a href="#emergency" className="block hover:text-white">জরুরি সেবা</a>
+              <a href="#tips" className="block hover:text-white">স্বাস্থ্য টিপস</a>
+            </div>
+          </div>
+
+          {/* About */}
+          <div>
+            <h4 className="font-bold text-white">আমাদের সম্পর্কে</h4>
+            <div className="mt-4 space-y-2.5 text-sm">
+              <Link href="/about" className="block hover:text-white">আমাদের সম্পর্কে</Link>
+              <a href="#contact" className="block hover:text-white">যোগাযোগ</a>
+              <Link href="/privacy" className="block hover:text-white">গোপনীয়তা নীতি</Link>
+              <Link href="/terms" className="block hover:text-white">ব্যবহার শর্তাবলী</Link>
+            </div>
+          </div>
 
           {/* Contact */}
           <div>
-
-            <h4 className="font-bold text-white">
-              যোগাযোগ
-            </h4>
-
-            <div className="mt-5 space-y-4 text-sm">
-
-              <div className="flex items-center gap-3">
-                <Phone className="h-4 w-4 text-emerald-500" />
-                <span>+880 1XXXXXXXXX</span>
+            <h4 className="font-bold text-white">যোগাযোগ</h4>
+            <div className="mt-4 space-y-3 text-sm">
+              <a href={`tel:${HOTLINE.tel}`} className="flex items-center gap-2.5 hover:text-white">
+                <Phone className="h-4 w-4 text-emerald-300" />
+                {HOTLINE.display}
+              </a>
+              <a href="mailto:info@dakdin.com" className="flex items-center gap-2.5 hover:text-white">
+                <Mail className="h-4 w-4 text-emerald-300" />
+                info@dakdin.com
+              </a>
+              <div className="flex items-center gap-2.5">
+                <MapPin className="h-4 w-4 text-emerald-300" />
+                ময়মনসিংহ, বাংলাদেশ
               </div>
-
-              <div className="flex items-center gap-3">
-                <MapPin className="h-4 w-4 text-emerald-500" />
-                <span>Bangladesh</span>
+              <div className="flex gap-2.5 pt-1">
+                {[
+                  { label: 'Facebook', glyph: 'f', href: 'https://facebook.com' },
+                  { label: 'YouTube', glyph: '▶', href: 'https://youtube.com' },
+                  { label: 'Instagram', glyph: '◎', href: 'https://instagram.com' },
+                ].map((s) => (
+                  <a
+                    key={s.label}
+                    href={s.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={s.label}
+                    className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-sm font-black text-emerald-900 transition hover:bg-emerald-100"
+                  >
+                    {s.glyph}
+                  </a>
+                ))}
               </div>
-
             </div>
-
           </div>
-
         </div>
 
-
-        <div className="mx-auto mt-12 flex max-w-7xl flex-col justify-between gap-4 border-t border-white/10 pt-7 text-xs sm:flex-row">
-
+        <div className="mx-auto mt-10 flex max-w-7.5xl flex-col justify-between gap-3 border-t border-white/10 pt-5 text-xs sm:flex-row">
+          <p>© 2026 DakDin. সর্বস্বত্ব সংরক্ষিত।</p>
           <p>
-            © 2026 DakDin. All rights reserved.
+            Made with <span className="text-rose-400">♥</span> for a healthier community
           </p>
-
-          <div className="flex gap-5">
-            <Link href="/privacy" className="hover:text-white">
-              Privacy
-            </Link>
-
-            <Link href="/terms" className="hover:text-white">
-              Terms
-            </Link>
-          </div>
-
         </div>
-
       </footer>
 
-      {/* Book Now modal — identical booking flow to the /public-agents directory */}
-      {selectedAgent && (
+      {/* Sticky call button — mobile only */}
+      <a
+        href={`tel:${HOTLINE.tel}`}
+        style={{ backgroundColor: BRAND }}
+        className="fixed inset-x-3 bottom-3 z-40 flex items-center justify-center gap-2 rounded-full py-3.5 text-sm font-black text-white shadow-2xl shadow-black/30 sm:hidden"
+        aria-label="হটলাইনে ফোন করুন"
+      >
+        <Phone className="h-5 w-5" />
+        কল করুন · {HOTLINE.display}
+      </a>
+
+      {/* Booking request modal — opened from the search bar / service cards.
+          No agent is selected here; the Super Admin assigns one after review. */}
+      {bookingService && (
         <BookNowModal
-          agent={selectedAgent}
-          onClose={() => setSelectedAgent(null)}
+          initialService={bookingService}
+          initialDoctor={bookingDoctor}
+          onClose={() => {
+            setBookingService(null);
+            setBookingDoctor(null);
+          }}
         />
       )}
 
@@ -1269,7 +1667,6 @@ export default function LandingPage() {
           onClose={() => setTransportVehicle(null)}
         />
       )}
-
     </main>
   );
 }

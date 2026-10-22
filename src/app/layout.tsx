@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import { Toaster } from 'react-hot-toast';
+import VisitTracker from '@/components/layout/VisitTracker';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -19,6 +20,8 @@ export default function RootLayout({
     <html lang="en">
       <body className={inter.className}>
         {children}
+        {/* Site-wide page-view counter (fire-and-forget, admin Security tab). */}
+        <VisitTracker />
         <Toaster position="top-right" />
       </body>
     </html>

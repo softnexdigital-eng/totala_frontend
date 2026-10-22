@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { getAuthToken } from '@/lib/serverAuth';
 
 export async function PUT(
   req: Request,
@@ -6,7 +7,8 @@ export async function PUT(
 ) {
   try {
     const authHeader = req.headers.get('authorization');
-    const token = authHeader?.replace('Bearer ', '').trim();
+    const headerToken = authHeader?.replace('Bearer ', '').trim();
+    const token = headerToken || (await getAuthToken());
     const body = await req.json();
 
     if (!token) {
@@ -26,7 +28,7 @@ export async function PUT(
     });
 
     const data = await response.json();
-    return NextResponse.json(data);
+    return NextResponse.json(data, { status: response.status });
   } catch (error) {
     return NextResponse.json(
       { success: false, message: 'Internal server error' },

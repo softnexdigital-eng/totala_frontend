@@ -17,7 +17,10 @@ export async function GET() {
       next: { revalidate: 60 },
     });
 
-    const data = await response.json();
+    const data = await response.json().catch(() => ({
+      success: false,
+      message: 'Failed to fetch packages',
+    }));
     return NextResponse.json(data);
   } catch (error) {
     return NextResponse.json(
@@ -48,7 +51,10 @@ export async function POST(req: Request) {
       body: JSON.stringify(body),
     });
 
-    const data = await response.json();
+    const data = await response.json().catch(() => ({
+      success: false,
+      message: 'Failed to create package',
+    }));
     return NextResponse.json(data);
   } catch (error) {
     return NextResponse.json(

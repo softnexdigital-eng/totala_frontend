@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
+import { formatBDT, paymentStatusColor, paymentStatusLabel } from '@/lib/payments';
 
 interface Booking {
   id: string;
@@ -20,12 +21,22 @@ interface Booking {
   status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'ASSIGNED' | 'COMPLETED' | 'CANCELLED';
   agentId?: string;
   agent?: { name: string };
+  /** Payment snapshot recorded by the landing-page gateway checkout. */
+  totalServiceCharge?: number;
+  minRequiredPayment?: number;
+  amountPaid?: number;
+  remainingDue?: number;
+  paymentStatus?: string;
+  paymentMethod?: string;
+  transactionId?: string;
   createdAt: string;
 }
 
 interface Agent {
   id: string;
   name: string;
+  /** Freeze workflow: previous task payment awaiting Super Admin "End". */
+  isFrozen?: boolean;
 }
 
 export default function BookingsPage() {
@@ -169,7 +180,7 @@ export default function BookingsPage() {
   }
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <div className="p-6 max-w-7.5xl mx-auto">
       <div className="mb-6">
         <h1 className="text-2xl font-bold">Online Bookings</h1>
         <p className="text-gray-600 mt-1">
@@ -200,6 +211,9 @@ export default function BookingsPage() {
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                     Status
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Payment
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                     Agent
@@ -236,6 +250,30 @@ export default function BookingsPage() {
                         {booking.status}
                       </span>
                     </td>
+                    <td className="px-6 py-4">
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-sm font-medium text-emerald-700">
+                          {formatBDT(booking.amountPaid || 0)}
+                          {booking.totalServiceCharge ? (
+                            <span className="text-xs font-normal text-gray-500">
+                              {' '}/ {formatBDT(booking.totalServiceCharge)}
+                            </span>
+                          ) : null}
+                        </span>
+                        {(booking.remainingDue || 0) > 0 && (
+                          <span className="text-xs text-rose-600">
+                            Due {formatBDT(booking.remainingDue)}
+                          </span>
+                        )}
+                        <span
+                          className={`px-2 self-start inline-flex text-xs leading-5 font-semibold rounded-full ${paymentStatusColor(
+                            booking.paymentStatus
+                          )}`}
+                        >
+                          {paymentStatusLabel(booking.paymentStatus)}
+                        </span>
+                      </div>
+                    </td>
                     <td className="px-6 py-4 text-sm">
                       {booking.agent ? booking.agent.name : '-'}
                     </td>
@@ -256,8 +294,9 @@ export default function BookingsPage() {
                                 Approve with Agent
                               </option>
                               {agents.map((agent) => (
-                                <option key={agent.id} value={agent.id}>
+                                <option key={agent.id} value={agent.id} disabled={agent.isFrozen}>
                                   {agent.name}
+                                  {agent.isFrozen ? ' — Freeze' : ''}
                                 </option>
                               ))}
                             </select>
@@ -283,8 +322,9 @@ export default function BookingsPage() {
                               Reassign Agent
                             </option>
                             {agents.map((agent) => (
-                              <option key={agent.id} value={agent.id}>
+                              <option key={agent.id} value={agent.id} disabled={agent.isFrozen}>
                                 {agent.name}
+                                {agent.isFrozen ? ' — Freeze' : ''}
                               </option>
                             ))}
                           </select>

@@ -7,5 +7,8 @@ export async function getAuthToken(): Promise<string | undefined> {
   const agentToken = cookies().get('agentToken')?.value;
   if (agentToken) return agentToken;
 
+  const doctorToken = cookies().get('doctorToken')?.value;
+  if (doctorToken) return doctorToken;
+
   return undefined;
 }

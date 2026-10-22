@@ -21,6 +21,7 @@ const pageTitles: Record<string, string> = {
   '/agent-booking-requests': 'Agent Booking Requests',
   '/agents/ratings': 'Agent Ratings',
   '/audit': 'Audit Report',
+  '/security': 'Security & Fraud Shield',
   '/reports': 'Reports',
 };
 

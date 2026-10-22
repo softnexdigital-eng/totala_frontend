@@ -3,6 +3,15 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
+import { DocumentGroup } from '@/components/common/DocumentViewer';
+
+interface PatientTaskDocument {
+  taskId: string;
+  taskStatus: string;
+  date?: string;
+  prescriptions?: string[];
+  invoiceUrl?: string | null;
+}
 
 interface Patient {
   id: string;
@@ -12,6 +21,26 @@ interface Patient {
   address?: string;
   isRegistered: boolean;
   createdAt: string;
+  /** Prescription / invoice uploaded on this patient's tasks (from the API). */
+  taskDocuments?: PatientTaskDocument[];
+}
+
+/** Flatten every task document of a patient into one gallery-ready file list. */
+function patientDocumentFiles(patient: Patient) {
+  const files: { url: string; label?: string }[] = [];
+  let rxCount = 0;
+  let invCount = 0;
+  (patient.taskDocuments || []).forEach((doc) => {
+    (Array.isArray(doc.prescriptions) ? doc.prescriptions : []).forEach((url) => {
+      rxCount += 1;
+      files.push({ url, label: `Rx ${rxCount}` });
+    });
+    if (doc.invoiceUrl) {
+      invCount += 1;
+      files.push({ url: doc.invoiceUrl, label: invCount > 1 ? `Invoice ${invCount}` : 'Invoice' });
+    }
+  });
+  return files;
 }
 
 interface PatientsClientProps {
@@ -79,6 +108,9 @@ export default function PatientsClient({ initialPatients }: PatientsClientProps)
                 Registered
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                Prescription / Invoice
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                 Actions
               </th>
             </tr>
@@ -86,7 +118,7 @@ export default function PatientsClient({ initialPatients }: PatientsClientProps)
           <tbody className="divide-y divide-gray-200">
             {filteredPatients.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-6 py-4 text-center text-gray-500">
+                <td colSpan={6} className="px-6 py-4 text-center text-gray-500">
                   No patients found
                 </td>
               </tr>
@@ -106,6 +138,14 @@ export default function PatientsClient({ initialPatients }: PatientsClientProps)
                     >
                       {patient.isRegistered ? 'Yes' : 'No'}
                     </span>
+                  </td>
+                  <td className="px-6 py-4">
+                    <DocumentGroup
+                      files={patientDocumentFiles(patient)}
+                      title={`Documents · ${patient.name}`}
+                      emptyText="—"
+                      maxVisible={3}
+                    />
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <button

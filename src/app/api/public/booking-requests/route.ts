@@ -13,44 +13,9 @@
  */
 import { NextResponse } from 'next/server';
 import { validatePhone } from '@/lib/validation';
+import { backendJson, forwardClientHeaders } from '@/lib/serverProxy';
 
 const BACKEND = process.env.BACKEND_URL;
-
-/**
- * Safe backend JSON fetch that never throws.
- *
- * Returns the parsed body for successful *and* failed JSON responses so the
- * caller can forward the real backend error message. `data` is `null` for
- * non-JSON bodies (e.g. an HTML error page) and for unreachable backends, where
- * `status` is reported as `0`.
- */
-async function backendJson(
-  input: string,
-  init?: RequestInit
-): Promise<{ ok: boolean; status: number; data: any }> {
-  try {
-    const res = await fetch(input, {
-      ...init,
-      headers: {
-        Accept: 'application/json',
-        ...(init?.headers as Record<string, string> | undefined),
-      },
-      cache: 'no-store',
-    });
-    const contentType = res.headers.get('content-type') || '';
-    // A non-JSON body (e.g. an HTML error page) is never a usable API response.
-    if (!contentType.includes('application/json')) {
-      return { ok: false, status: res.status, data: null };
-    }
-    // Parse the body even for non-2xx responses so the real backend message
-    // (validation error / not found) can be shown instead of a generic
-    // "please try again".
-    const data = await res.json().catch(() => null);
-    return { ok: res.ok, status: res.status, data };
-  } catch {
-    return { ok: false, status: 0, data: null };
-  }
-}
 
 export async function POST(req: Request) {
   try {
@@ -68,9 +33,17 @@ export async function POST(req: Request) {
       preferredDate,
       preferredTime,
       hospital,
+      doctorId,
+      doctorName,
       bookingReason,
       additionalNote,
       patient,
+      // Anti-fraud fields — forwarded straight through to the backend:
+      bookingToken, // single-use token from POST /api/public/booking-otp/verify
+      idempotencyKey, // collapses double-click/retry submits into one booking
+      formOpenedAt, // client render timestamp — bot-trap rejects <3s submits
+      fingerprint, // stable per-browser id for visitor logs
+      company_name, // honeypot field — must stay empty for humans
     } = body || {};
 
     if (!patient || !patient.name || !patient.phone || !patient.age || !patient.address) {
@@ -125,7 +98,11 @@ export async function POST(req: Request) {
       gender: patient.gender || undefined,
       date: preferredDate,
       time: preferredTime,
+      preferredDate: preferredDate || undefined,
+      preferredTime: preferredTime || undefined,
       hospital: hospital || undefined,
+      doctorId: doctorId || null,
+      doctorName: doctorName || null,
       // Send the individual fields as well so the dashboard keeps the exact
       // reason / note the visitor typed (the combined `notes` string is kept
       // for backwards compatibility with the appointment-style payload).
@@ -140,11 +117,31 @@ export async function POST(req: Request) {
         .filter(Boolean)
         .join('\n'),
       status: 'PENDING',
+      // Mandatory initial-payment snapshot (dummy gateway verified on the
+      // client; backend re-validates the amount against the service charge).
+      serviceTypeId: body.serviceTypeId || undefined,
+      totalServiceCharge: body.totalServiceCharge ?? undefined,
+      minRequiredPayment: body.minRequiredPayment ?? undefined,
+      amountPaid: body.amountPaid ?? undefined,
+      paymentMethod: body.paymentMethod || undefined,
+      transactionId: body.transactionId || undefined,
+      paymentVerified: body.paymentVerified ?? undefined,
+      // Anti-fraud passthrough (backend requires a valid bookingToken and
+      // enforces the honeypot / formOpenedAt bot-trap on create).
+      patientEmail: patient.email ? String(patient.email).trim().toLowerCase() : undefined,
+      bookingToken: bookingToken || undefined,
+      idempotencyKey: idempotencyKey || undefined,
+      formOpenedAt: formOpenedAt || undefined,
+      fingerprint: fingerprint || undefined,
+      company_name: company_name || undefined,
     };
 
     const booking = await backendJson(`${BACKEND}/api/bookings`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...forwardClientHeaders(req),
+      },
       body: JSON.stringify(bookingPayload),
     });
 

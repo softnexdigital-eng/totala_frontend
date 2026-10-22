@@ -1,0 +1,142 @@
+﻿
+> dakdin@1.0.0 build
+> next build
+
+   Γû▓ Next.js 14.0.4
+   - Environments: .env.local
+
+   Creating an optimized production build ...
+ Γ£ô Compiled successfully
+   Linting and checking validity of types ...
+   Collecting page data ...
+   Generating static pages (0/70) ...
+
+   Generating static pages (17/70) 
+
+   Generating static pages (34/70) 
+
+   Generating static pages (52/70) 
+
+ Γ£ô Generating static pages (70/70) 
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                                   Size     First Load JS
+Γöî Γùï /                                         19.1 kB         120 kB
+Γö£ Γùï /_not-found                               0 B                0 B
+Γö£ ╬╗ /agent-booking-requests                   8.06 kB        89.8 kB
+Γö£ ╬╗ /agent-dashboard                          2.84 kB        98.5 kB
+Γö£ ╬╗ /agent-dashboard/tasks/[id]               5.23 kB         101 kB
+Γö£ Γùï /agent-login                              6.13 kB        87.9 kB
+Γö£ ╬╗ /agents                                   6.09 kB        94.6 kB
+Γö£ ╬╗ /agents/[id]                              176 B            88 kB
+Γö£ ╬╗ /agents/[id]/history                      2.23 kB          84 kB
+Γö£ ╬╗ /agents/new                               351 B          88.2 kB
+Γö£ ╬╗ /agents/ratings                           7 kB           88.8 kB
+Γö£ ╬╗ /api/agents                               0 B                0 B
+Γö£ ╬╗ /api/agents/[id]                          0 B                0 B
+Γö£ ╬╗ /api/agents/[id]/history                  0 B                0 B
+Γö£ ╬╗ /api/agents/login                         0 B                0 B
+Γö£ ╬╗ /api/agents/me                            0 B                0 B
+Γö£ ╬╗ /api/appointments                         0 B                0 B
+Γö£ ╬╗ /api/appointments/[id]                    0 B                0 B
+Γö£ ╬╗ /api/appointments/[id]/payments           0 B                0 B
+Γö£ ╬╗ /api/appointments/[id]/status             0 B                0 B
+Γö£ ╬╗ /api/appointments/book                    0 B                0 B
+Γö£ ╬╗ /api/audit-logs                           0 B                0 B
+Γö£ ╬╗ /api/auth/login                           0 B                0 B
+Γö£ ╬╗ /api/auth/logout                          0 B                0 B
+Γö£ ╬╗ /api/auth/verify-otp                      0 B                0 B
+Γö£ ╬╗ /api/bookings                             0 B                0 B
+Γö£ ╬╗ /api/bookings/[id]                        0 B                0 B
+Γö£ ╬╗ /api/bookings/[id]/assign                 0 B                0 B
+Γö£ ╬╗ /api/dashboard/summary                    0 B                0 B
+Γö£ ╬╗ /api/doctors                              0 B                0 B
+Γö£ ╬╗ /api/doctors/[id]                         0 B                0 B
+Γö£ ╬╗ /api/hospitals                            0 B                0 B
+Γö£ ╬╗ /api/hospitals/[id]                       0 B                0 B
+Γö£ ╬╗ /api/packages                             0 B                0 B
+Γö£ ╬╗ /api/packages/[id]                        0 B                0 B
+Γö£ ╬╗ /api/patients                             0 B                0 B
+Γö£ ╬╗ /api/patients/[id]                        0 B                0 B
+Γö£ ╬╗ /api/patients/[id]/history                0 B                0 B
+Γö£ ╬╗ /api/payments                             0 B                0 B
+Γö£ ╬╗ /api/payments/[id]                        0 B                0 B
+Γö£ ╬╗ /api/payments/[id]/status                 0 B                0 B
+Γö£ ╬╗ /api/payments/appointments/[id]/payments  0 B                0 B
+Γö£ ╬╗ /api/payments/hub-deposit                 0 B                0 B
+Γö£ ╬╗ /api/permissions                          0 B                0 B
+Γö£ ╬╗ /api/permissions/[id]                     0 B                0 B
+Γö£ ╬╗ /api/public-agents                        0 B                0 B
+Γö£ ╬╗ /api/public/booking-requests              0 B                0 B
+Γö£ Γùï /api/public/hospitals                     0 B                0 B
+Γö£ Γùï /api/public/service-types                 0 B                0 B
+Γö£ ╬╗ /api/ratings                              0 B                0 B
+Γö£ ╬╗ /api/ratings/[id]                         0 B                0 B
+Γö£ ╬╗ /api/reports/daily                        0 B                0 B
+Γö£ ╬╗ /api/reports/daily-summary                0 B                0 B
+Γö£ ╬╗ /api/reports/financial                    0 B                0 B
+Γö£ ╬╗ /api/reports/monthly                      0 B                0 B
+Γö£ ╬╗ /api/search                               0 B                0 B
+Γö£ ╬╗ /api/service-types                        0 B                0 B
+Γö£ ╬╗ /api/service-types/[id]                   0 B                0 B
+Γö£ ╬╗ /api/tasks                                0 B                0 B
+Γö£ ╬╗ /api/tasks/[id]                           0 B                0 B
+Γö£ ╬╗ /api/tasks/[id]/approve                   0 B                0 B
+Γö£ ╬╗ /api/tasks/[id]/documents                 0 B                0 B
+Γö£ ╬╗ /api/tasks/[id]/end                       0 B                0 B
+Γö£ ╬╗ /api/tasks/[id]/receive                   0 B                0 B
+Γö£ ╬╗ /api/tasks/[id]/start                     0 B                0 B
+Γö£ ╬╗ /api/tasks/[id]/status                    0 B                0 B
+Γö£ ╬╗ /api/tasks/tracking                       0 B                0 B
+Γö£ ╬╗ /api/tests                                0 B                0 B
+Γö£ ╬╗ /api/tests/[id]                           0 B                0 B
+Γö£ ╬╗ /api/transport/bookings                   0 B                0 B
+Γö£ ╬╗ /api/transport/bookings/[id]              0 B                0 B
+Γö£ ╬╗ /api/transport/bookings/[id]/reject       0 B                0 B
+Γö£ ╬╗ /api/transport/bookings/list              0 B                0 B
+Γö£ ╬╗ /api/transport/pricing                    0 B                0 B
+Γö£ ╬╗ /api/upload                               0 B                0 B
+Γö£ ╬╗ /appointments                             8.67 kB        90.5 kB
+Γö£ ╬╗ /appointments/[id]                        178 B          88.6 kB
+Γö£ ╬╗ /appointments/new                         6.52 kB        88.3 kB
+Γö£ ╬╗ /audit                                    1.71 kB        83.5 kB
+Γö£ ╬╗ /bookings                                 6.73 kB        88.5 kB
+Γö£ Γùï /bookings/new                             7.54 kB        89.3 kB
+Γö£ ╬╗ /dashboard                                12.8 kB        94.6 kB
+Γö£ ╬╗ /doctor-booking                           6.65 kB        96.4 kB
+Γö£ ╬╗ /doctors                                  6.43 kB        94.9 kB
+Γö£ ╬╗ /doctors/[id]                             175 B          88.4 kB
+Γö£ ╬╗ /doctors/new                              350 B          88.6 kB
+Γö£ ╬╗ /hospitals                                6.8 kB         95.3 kB
+Γö£ ╬╗ /hospitals/[id]                           6.09 kB        87.9 kB
+Γö£ Γùï /login                                    9.69 kB        91.5 kB
+Γö£ ╬╗ /packages                                 7.01 kB        95.5 kB
+Γö£ ╬╗ /packages/[id]                            6.37 kB        88.2 kB
+Γö£ ╬╗ /patients                                 6.09 kB        94.6 kB
+Γö£ ╬╗ /patients/[id]                            6.12 kB        87.9 kB
+Γö£ ╬╗ /patients/[id]/history                    2.5 kB         84.3 kB
+Γö£ ╬╗ /patients/new                             6.09 kB        87.9 kB
+Γö£ ╬╗ /payments                                 6.31 kB        88.1 kB
+Γö£ ╬╗ /permissions                              6.23 kB          88 kB
+Γö£ Γùï /public-agents                            1.36 kB         102 kB
+Γö£ ╬╗ /reports                                  161 B            82 kB
+Γö£ ╬╗ /reports/financial                        1.8 kB         83.6 kB
+Γö£ ╬╗ /service-types                            7.74 kB        89.5 kB
+Γö£ ╬╗ /tasks                                    8.56 kB        90.3 kB
+Γö£ ╬╗ /tests                                    1.41 kB        89.9 kB
+Γö£ ╬╗ /tests/[id]                               161 B            82 kB
+Γö£ ╬╗ /tests/new                                6.22 kB          88 kB
+Γöö ╬╗ /transport                                7.68 kB        89.5 kB
++ First Load JS shared by all                 81.8 kB
+  Γö£ chunks/4938-a1d6a49b6e472586.js           26.6 kB
+  Γö£ chunks/fd9d1056-07713231ad95aa57.js       53.3 kB
+  Γö£ chunks/main-app-dddf4b47f821727c.js       223 B
+  Γöö chunks/webpack-6ae635fdcc43b173.js        1.69 kB
+
+
+╞Æ Middleware                                  42.3 kB
+
+Γùï  (Static)   prerendered as static content
+╬╗  (Dynamic)  server-rendered on demand using Node.js
+

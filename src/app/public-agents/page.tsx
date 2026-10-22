@@ -54,7 +54,7 @@ export default function PublicAgentsPage() {
       </nav>
 
       <main className="px-6 py-16 lg:px-12">
-        <div className="mx-auto max-w-7xl">
+        <div className="mx-auto max-w-7.5xl">
           <div className="text-center mb-12">
             <h1 className="text-4xl font-bold text-gray-900 lg:text-5xl">
               <span className="bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">

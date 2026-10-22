@@ -1,9 +1,21 @@
 import { NextResponse } from 'next/server';
+import { getAuthToken } from '@/lib/serverAuth';
 
+/**
+ * Task list proxy.
+ *
+ * Rows carry the freeze flags (`isDisabled`, `awaitingEnd`, `canEnd`) computed by
+ * the backend, so the Super Admin dashboard can render the disabled state and
+ * enable the "End" button only after the service-charge payment is submitted.
+ *
+ * The token comes from the `Authorization` header (agent client) or, when absent,
+ * from the admin/agent session cookie (dashboard refresh polling).
+ */
 export async function GET(req: Request) {
   try {
     const authHeader = req.headers.get('authorization');
-    const token = authHeader?.replace('Bearer ', '').trim();
+    const headerToken = authHeader?.replace('Bearer ', '').trim();
+    const token = headerToken || (await getAuthToken());
 
     if (!token) {
       return NextResponse.json(
@@ -30,7 +42,8 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const authHeader = req.headers.get('authorization');
-    const token = authHeader?.replace('Bearer ', '').trim();
+    const headerToken = authHeader?.replace('Bearer ', '').trim();
+    const token = headerToken || (await getAuthToken());
     const body = await req.json();
 
     if (!token) {

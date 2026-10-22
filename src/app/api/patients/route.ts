@@ -26,7 +26,10 @@ export async function GET(req: Request) {
       }
     );
 
-    const data = await response.json();
+    const data = await response.json().catch(() => ({
+      success: false,
+      message: 'Failed to fetch patients',
+    }));
     return NextResponse.json(data);
   } catch (error) {
     return NextResponse.json(
@@ -57,7 +60,10 @@ export async function POST(req: Request) {
       body: JSON.stringify(body),
     });
 
-    const data = await response.json();
+    const data = await response.json().catch(() => ({
+      success: false,
+      message: 'Failed to create patient',
+    }));
     return NextResponse.json(data);
   } catch (error) {
     return NextResponse.json(

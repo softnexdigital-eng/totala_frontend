@@ -7,6 +7,7 @@ import { toast } from 'react-hot-toast';
 interface Doctor {
   id: string;
   name: string;
+  title?: string | null;
   designation?: string;
   specialty?: string;
   consultationFee?: number;
@@ -15,6 +16,15 @@ interface Doctor {
   visitingTime?: string;
   appointmentUrl?: string;
   isActive: boolean;
+  email?: string | null;
+  mobileNumber?: string | null;
+  bmdcRegNo?: string | null;
+  degree?: string | null;
+  gender?: string | null;
+  description?: string | null;
+  registrationStatus?: string;
+  isVerified?: boolean;
+  createdAt?: string;
 }
 
 interface DoctorsClientProps {
@@ -23,13 +33,147 @@ interface DoctorsClientProps {
 
 export default function DoctorsClient({ initialDoctors }: DoctorsClientProps) {
   const [doctors, setDoctors] = useState<Doctor[]>(initialDoctors);
+  const [registrations, setRegistrations] = useState<Doctor[]>([]);
+  const [actionId, setActionId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const router = useRouter();
+
+  useEffect(() => {
+    fetch('/api/doctors/registrations?status=PENDING')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success) {
+          setRegistrations(data.data || []);
+        }
+      })
+      .catch(() => {
+        /* approval queue is non-critical — keep the page usable */
+      });
+  }, []);
 
   const filteredDoctors = doctors.filter((doctor) =>
     doctor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (doctor.specialty || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
     (doctor.hospital || '').toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const handleRegistrationAction = async (
+    id: string,
+    status: 'APPROVED' | 'REJECTED'
+  ) => {
+    const approve = status === 'APPROVED';
+    const question = approve
+      ? 'এই ডাক্তারের নিবন্ধন অনুমোদন করবেন?'
+      : 'এই ডাক্তারের নিবন্ধন প্রত্যাখ্যান করবেন?';
+    if (!confirm(question)) return;
+
+    setActionId(id);
+    try {
+      const response = await fetch(`/api/doctors/${id}/registration-status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        toast.success(
+          approve ? 'নিবন্ধন অনুমোদিত হয়েছে' : 'নিবন্ধন প্রত্যাখ্যাত হয়েছে'
+        );
+        setRegistrations((prev) => prev.filter((r) => r.id !== id));
+        setDoctors((prev) =>
+          prev.map((d) =>
+            d.id === id
+              ? {
+                  ...d,
+                  registrationStatus: status,
+                  isVerified: approve ? true : d.isVerified,
+                  isActive: approve,
+                }
+              : d
+          )
+        );
+      } else {
+        toast.error(result.message || 'আপডেট ব্যর্থ');
+      }
+    } catch {
+      toast.error('আপডেট ব্যর্থ');
+    }
+    setActionId(null);
+  };
+
+  const registrationQueue = (
+    <div className="bg-white rounded-lg shadow">
+      <div className="px-4 py-3 border-b flex items-center justify-between">
+        <h2 className="font-semibold text-gray-800">
+          নিবন্ধন অনুরোধ
+          <span
+            className={`ml-2 text-xs font-semibold px-2 py-0.5 rounded-full ${
+              registrations.length > 0
+                ? 'bg-amber-100 text-amber-800'
+                : 'bg-gray-100 text-gray-500'
+            }`}
+          >
+            {registrations.length}
+          </span>
+        </h2>
+        {registrations.length > 0 && (
+          <span className="text-xs text-gray-500">
+            অনুমোদনের অপেক্ষায় থাকলে ডাক্তার সক্রিয় হবেন না
+          </span>
+        )}
+      </div>
+      {registrations.length === 0 ? (
+        <p className="px-4 py-4 text-sm text-gray-500">
+          কোনো নতুন নিবন্ধন অনুরোধ নেই
+        </p>
+      ) : (
+        <ul className="divide-y divide-gray-200">
+          {registrations.map((reg) => (
+            <li
+              key={reg.id}
+              className="px-4 py-3 flex flex-col md:flex-row md:items-center md:justify-between gap-3"
+            >
+              <div className="min-w-0">
+                <p className="font-medium text-gray-900 truncate">
+                  {reg.name}
+                  {reg.title ? `, ${reg.title}` : ''}
+                </p>
+                <p className="text-sm text-gray-600 truncate">
+                  {[reg.specialty, reg.degree].filter(Boolean).join(' • ')}
+                </p>
+                <p className="text-xs text-gray-500 truncate">
+                  {[
+                    reg.email,
+                    reg.mobileNumber,
+                    reg.bmdcRegNo ? `BMDC: ${reg.bmdcRegNo}` : null,
+                  ]
+                    .filter(Boolean)
+                    .join(' | ')}
+                </p>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  onClick={() => handleRegistrationAction(reg.id, 'APPROVED')}
+                  disabled={actionId === reg.id}
+                  className="px-4 py-1.5 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 disabled:opacity-50"
+                >
+                  {actionId === reg.id ? '...' : 'Approve'}
+                </button>
+                <button
+                  onClick={() => handleRegistrationAction(reg.id, 'REJECTED')}
+                  disabled={actionId === reg.id}
+                  className="px-4 py-1.5 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 disabled:opacity-50"
+                >
+                  Reject
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 
   const handleDelete = async (id: string) => {
@@ -54,7 +198,9 @@ export default function DoctorsClient({ initialDoctors }: DoctorsClientProps) {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow overflow-hidden">
+    <>
+      {registrationQueue}
+      <div className="bg-white rounded-lg shadow overflow-hidden">
       <div className="p-4 border-b">
         <input
           type="text"
@@ -128,6 +274,9 @@ export default function DoctorsClient({ initialDoctors }: DoctorsClientProps) {
                 Active
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                Registration
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                 Actions
               </th>
             </tr>
@@ -135,7 +284,7 @@ export default function DoctorsClient({ initialDoctors }: DoctorsClientProps) {
           <tbody className="divide-y divide-gray-200">
             {filteredDoctors.length === 0 ? (
               <tr>
-                <td colSpan={8} className="px-6 py-4 text-center text-gray-500">
+                <td colSpan={9} className="px-6 py-4 text-center text-gray-500">
                   No doctors found
                 </td>
               </tr>
@@ -154,6 +303,23 @@ export default function DoctorsClient({ initialDoctors }: DoctorsClientProps) {
                     <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${doctor.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
                       {doctor.isActive ? 'Yes' : 'No'}
                     </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {(() => {
+                      const status = doctor.registrationStatus || 'APPROVED';
+                      const styles: Record<string, string> = {
+                        PENDING: 'bg-amber-100 text-amber-800',
+                        APPROVED: 'bg-green-100 text-green-800',
+                        REJECTED: 'bg-red-100 text-red-800',
+                      };
+                      return (
+                        <span
+                          className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${styles[status] || 'bg-gray-100 text-gray-700'}`}
+                        >
+                          {status}
+                        </span>
+                      );
+                    })()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <button
@@ -175,6 +341,7 @@ export default function DoctorsClient({ initialDoctors }: DoctorsClientProps) {
           </tbody>
         </table>
       </div>
-    </div>
+      </div>
+    </>
   );
 }

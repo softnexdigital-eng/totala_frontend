@@ -32,6 +32,7 @@ const DEFAULT_PERMISSIONS: PermissionStructure = {
   tests: { label: 'Tests', description: 'Manage tests' },
   reports: { label: 'Reports', description: 'View reports' },
   permissions: { label: 'Permissions', description: 'Manage agent permissions' },
+  security: { label: 'Security', description: 'Fraud shield: visitors, leads & blocked IPs' },
 };
 
 export default function PermissionsClient({ initialAgents }: { initialAgents: Agent[] }) {

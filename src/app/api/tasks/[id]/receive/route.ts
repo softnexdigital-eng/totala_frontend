@@ -1,13 +1,10 @@
 import { NextResponse } from 'next/server';
 import { getAuthToken } from '@/lib/serverAuth';
 
-export async function PUT(
-  req: Request,
-  { params }: { params: { id: string } }
-) {
+async function forward(req: Request, params: { id: string }, suffix: string) {
   try {
-    const authHeader = req.headers.get('authorization');
-    const token = authHeader?.replace('Bearer ', '').trim();
+    const bearerHeader = req.headers.get('authorization');
+    const token = bearerHeader?.replace('Bearer ', '').trim() || (await getAuthToken());
 
     if (!token) {
       return NextResponse.json(
@@ -16,15 +13,13 @@ export async function PUT(
       );
     }
 
-    const response = await fetch(`${process.env.BACKEND_URL}/api/tasks/${params.id}/receive`, {
+    const response = await fetch(`${process.env.BACKEND_URL}/api/tasks/${params.id}${suffix}`, {
       method: 'PUT',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
+      headers: { 'Authorization': `Bearer ${token}` },
     });
 
     const data = await response.json();
-    return NextResponse.json(data);
+    return NextResponse.json(data, { status: response.status });
   } catch (error) {
     return NextResponse.json(
       { success: false, message: 'Internal server error' },
@@ -32,3 +27,8 @@ export async function PUT(
     );
   }
 }
+
+export async function PUT(req: Request, { params }: { params: { id: string } }) {
+  return forward(req, params, '/receive');
+}
+

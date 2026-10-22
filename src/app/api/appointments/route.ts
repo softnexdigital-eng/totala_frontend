@@ -17,7 +17,10 @@ export async function GET() {
       cache: 'no-store',
     });
 
-    const data = await response.json();
+    const data = await response.json().catch(() => ({
+      success: false,
+      message: 'Failed to fetch appointments',
+    }));
     return NextResponse.json(data);
   } catch (error) {
     return NextResponse.json(

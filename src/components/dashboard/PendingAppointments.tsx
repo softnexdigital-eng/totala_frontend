@@ -15,6 +15,8 @@ interface Appointment {
   serviceFee: number;
   discountPercent?: number;
   notes?: string;
+  serialNo?: string | null;
+  serialTime?: string | null;
 }
 
 interface Agent {
@@ -149,6 +151,14 @@ function TaskCardSkeleton() {
       </div>
     </div>
   );
+}
+
+/** Serial time stamped by the booking flow — shown on the appointment card. */
+function formatSerialTime(value?: string | null) {
+  if (!value) return '—';
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return value;
+  return d.toLocaleString();
 }
 
 export default function PendingAppointments({ token }: PendingAppointmentsProps) {
@@ -502,6 +512,15 @@ export default function PendingAppointments({ token }: PendingAppointmentsProps)
                 </div>
                 <span className={`flex-shrink-0 rounded-full px-2.5 py-1 text-xs font-medium ${statusColor}`}>
                   {statusLabel}
+                </span>
+              </div>
+
+              <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                <span className="rounded-full bg-indigo-50 px-2.5 py-1 font-semibold text-indigo-700">
+                  Serial: {apt.serialNo || '—'}
+                </span>
+                <span className="rounded-full bg-slate-100 px-2.5 py-1 text-slate-600">
+                  Serial Time: {formatSerialTime(apt.serialTime)}
                 </span>
               </div>
 

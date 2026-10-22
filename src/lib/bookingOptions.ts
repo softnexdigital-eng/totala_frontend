@@ -8,16 +8,40 @@
  * stay compatible with the existing Online Bookings workflow.
  */
 
-export const SERVICE_NEEDED_OPTIONS = [
-  { value: 'Doctor Appointment', label: 'Doctor Appointment' },
-  { value: 'Hospital Visit', label: 'Hospital Visit' },
-  { value: 'Diagnostic/Test', label: 'Diagnostic/Test' },
-  { value: 'Report Collection', label: 'Report Collection' },
-  { value: 'Medicine Collection', label: 'Medicine Collection' },
-  { value: 'Blood Collection', label: 'Blood Collection' },
-  { value: 'Home Service', label: 'Home Service' },
-  { value: 'Other', label: 'Other' },
-];
+export const SERVICE_NEEDED_OPTIONS: { value: string; label: string }[] = [];
+
+export interface ServiceType {
+  id: string;
+  name: string;
+  description?: string;
+  serviceCharge?: number;
+  minRequiredPayment?: number;
+  serviceAvailability?: string;
+  isActive: boolean;
+  order: number;
+  createdAt: string;
+  updatedAt: string;
+  fields: {
+    id: string;
+    serviceTypeId: string;
+    name: string;
+    type: string;
+    isRequired: boolean;
+    options?: Record<string, unknown> | null;
+    order: number;
+    createdAt: string;
+    updatedAt: string;
+    subFields: {
+      id: string;
+      serviceFieldId: string;
+      name: string;
+      value?: string;
+      order: number;
+      createdAt: string;
+      updatedAt: string;
+    }[];
+  }[];
+}
 
 export const GENDER_OPTIONS = [
   { value: '', label: 'Select gender' },

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import { getStatusLabel, getStatusColor as getStatusColorShared } from '@/lib/appointmentStatus';
+import { formatBDT, paymentStatusColor, paymentStatusLabel, computePaymentStatus } from '@/lib/payments';
 
 interface Doctor {
   id: string;
@@ -15,6 +16,7 @@ interface Doctor {
 interface Appointment {
   id: string;
   doctorId: string;
+  doctorName?: string;
   hospital?: string;
   date: string;
   status: string;
@@ -22,6 +24,8 @@ interface Appointment {
   serviceFee: number;
   discountPercent?: number;
   notes?: string;
+  serialNo?: string | null;
+  serialTime?: string | null;
   doctor?: Doctor;
   patient?: { id: string; name: string };
   agent?: { id: string; name: string };
@@ -31,6 +35,13 @@ interface Appointment {
   taskStatus?: string;
   taskStartedAt?: string;
   taskId?: string;
+  /** Payment snapshot — total charge vs. what was paid up front. */
+  totalServiceCharge?: number;
+  minRequiredPayment?: number;
+  amountPaid?: number;
+  remainingDue?: number;
+  paymentStatus?: string;
+  paymentMethod?: string;
 }
 
 interface AppointmentsClientProps {
@@ -59,16 +70,26 @@ export default function AppointmentsClient({ initialAppointments, doctors }: App
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterDoctor, setFilterDoctor] = useState('all');
   const [showForm, setShowForm] = useState(false);
+  const [aptBeingEdited, setAptBeingEdited] = useState<Appointment | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     doctorId: '',
+    doctorName: '',
     hospital: '',
     date: '',
     serviceType: 'online',
+    serviceTypeId: '',
+    totalServiceCharge: '0',
+    minRequiredPayment: '0',
+    initialPayment: '0',
+    paymentMethod: 'CASH',
     notes: '',
     agentId: '',
+    serialNo: '',
+    serialTime: '',
   });
+  const [serviceTypes, setServiceTypes] = useState<any[]>([]);
 
   const filteredAppointments = appointments.filter((apt) => {
     const matchesSearch =
@@ -100,6 +121,13 @@ export default function AppointmentsClient({ initialAppointments, doctors }: App
         }
       })
       .catch(() => {});
+    fetch('/api/service-types')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success) setServiceTypes(data.data || []);
+        else if (Array.isArray(data)) setServiceTypes(data);
+      })
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -129,11 +157,19 @@ export default function AppointmentsClient({ initialAppointments, doctors }: App
   const resetForm = () => {
     setFormData({
       doctorId: '',
+      doctorName: '',
       hospital: '',
       date: '',
       serviceType: 'online',
+      serviceTypeId: '',
+      totalServiceCharge: '0',
+      minRequiredPayment: '0',
+      initialPayment: '0',
+      paymentMethod: 'CASH',
       notes: '',
       agentId: '',
+      serialNo: '',
+      serialTime: '',
     });
     setEditingId(null);
     setShowForm(false);
@@ -147,10 +183,47 @@ export default function AppointmentsClient({ initialAppointments, doctors }: App
       const url = editingId ? `/api/appointments/${editingId}` : '/api/appointments';
       const method = editingId ? 'PUT' : 'POST';
 
+      const total = Number(formData.totalServiceCharge) || 0;
+      const minimum = Number(formData.minRequiredPayment) || 0;
+      const initialPaid = Number(formData.initialPayment) || 0;
+      if (total <= 0) {
+        toast.error('Total service charge must be greater than 0');
+        setIsSubmitting(false);
+        return;
+      }
+      if (minimum > total) {
+        toast.error('Minimum required payment cannot exceed total service charge');
+        setIsSubmitting(false);
+        return;
+      }
+      if (initialPaid < 0 || initialPaid > total) {
+        toast.error('Initial payment must be between 0 and the total service charge');
+        setIsSubmitting(false);
+        return;
+      }
+
+      const submitPayload: any = {
+        ...formData,
+        totalServiceCharge: total,
+        minRequiredPayment: minimum,
+        serialNo: formData.serialNo.trim() || null,
+        serialTime: formData.serialTime ? new Date(formData.serialTime).toISOString() : null,
+      };
+
+      if (editingId) {
+        // Edits recompute amountPaid from recorded Payment rows — the upfront
+        // snapshot is creation-only, so never resend it on update.
+        delete submitPayload.initialPayment;
+        delete submitPayload.paymentMethod;
+      } else {
+        submitPayload.initialPayment = initialPaid;
+        submitPayload.paymentMethod = initialPaid > 0 ? formData.paymentMethod : null;
+      }
+
       const response = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(submitPayload),
       });
 
       const result = await response.json();
@@ -206,44 +279,68 @@ export default function AppointmentsClient({ initialAppointments, doctors }: App
   };
 
   const handleEdit = (apt: Appointment) => {
+    setAptBeingEdited(apt);
     setEditingId(apt.id);
     setFormData({
       doctorId: apt.doctorId,
+      doctorName: apt.doctorName || apt.doctor?.name || '',
       hospital: apt.hospital || '',
       date: apt.date.slice(0, 16),
       serviceType: apt.serviceType,
+      serviceTypeId: (apt as any).serviceTypeId || '',
+      totalServiceCharge: String((apt as any).totalServiceCharge ?? apt.serviceFee ?? 0),
+      minRequiredPayment: String((apt as any).minRequiredPayment ?? 0),
+      // Upfront payment is creation-only; on edit the figures come from the
+      // recorded Payment rows (shown read-only in the form header note).
+      initialPayment: '0',
+      paymentMethod: 'CASH',
       notes: apt.notes || '',
       agentId: apt.agent?.id || '',
+      serialNo: apt.serialNo || '',
+      serialTime: apt.serialTime ? new Date(apt.serialTime).toISOString().slice(0, 16) : '',
     });
     setShowForm(true);
   };
 
+  const getAuthToken = () => {
+    const match = document.cookie.match(/(?:^|; )token=([^;]+)/);
+    return match ? decodeURIComponent(match[1]) : null;
+  };
+
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this appointment?')) return;
+    if (!confirm('আপনি কি নিশ্চিত যে এই অ্যাপয়েন্টমেন্ট ডিলিট করতে চান?')) return;
 
     try {
+      const token = getAuthToken();
       const response = await fetch(`/api/appointments/${id}`, {
         method: 'DELETE',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        credentials: 'include',
       });
 
       const result = await response.json();
 
       if (result.success) {
-        toast.success('Appointment deleted successfully!');
+        toast.success('অ্যাপয়েন্টমেন্ট ডিলিট করা হয়েছে');
         setAppointments(appointments.filter((a) => a.id !== id));
       } else {
-        toast.error(result.message || 'Failed to delete appointment');
+        toast.error(result.message || 'অ্যাপয়েন্টমেন্ট ডিলিট করা যায়নি');
       }
     } catch (error) {
-      toast.error('Something went wrong');
+      toast.error('কিছু সমস্যা হয়েছে');
     }
   };
 
   const handlePaymentStatusUpdate = async (paymentId: string, paymentStatus: string) => {
     try {
+      const token = getAuthToken();
       const response = await fetch(`/api/payments/${paymentId}/status`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        credentials: 'include',
         body: JSON.stringify({ paymentStatus }),
       });
 
@@ -314,12 +411,19 @@ export default function AppointmentsClient({ initialAppointments, doctors }: App
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Doctor *
                 </label>
-                <select
-                  value={formData.doctorId}
-                  onChange={(e) => setFormData({ ...formData, doctorId: e.target.value })}
-                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                >
+                 <select
+                   value={formData.doctorId}
+                   onChange={(e) => {
+                     const doctor = doctors.find((d) => d.id === e.target.value);
+                     setFormData({
+                       ...formData,
+                       doctorId: e.target.value,
+                       doctorName: doctor?.name || '',
+                     });
+                   }}
+                   className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                   required
+                 >
                   <option value="">Select Doctor</option>
                   {doctors.map((doctor) => (
                     <option key={doctor.id} value={doctor.id}>
@@ -365,14 +469,133 @@ export default function AppointmentsClient({ initialAppointments, doctors }: App
                   Service Type
                 </label>
                 <select
-                  value={formData.serviceType}
-                  onChange={(e) => setFormData({ ...formData, serviceType: e.target.value })}
+                  value={formData.serviceTypeId || ''}
+                  onChange={(e) => {
+                    const st = serviceTypes.find((s) => s.id === e.target.value);
+                    setFormData({
+                      ...formData,
+                      serviceTypeId: e.target.value,
+                      totalServiceCharge: st ? String(st.serviceCharge ?? st.charge ?? 0) : formData.totalServiceCharge,
+                      minRequiredPayment: st ? String(st.minRequiredPayment ?? st.minimumPayment ?? 0) : formData.minRequiredPayment,
+                    });
+                  }}
                   className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
-                  <option value="online">Online (50 BDT)</option>
-                  <option value="package">Package (500 BDT)</option>
+                  <option value="">Select service (legacy: online/package)</option>
+                  {serviceTypes.map((st) => (
+                    <option key={st.id} value={st.id}>
+                      {st.name} — ৳{st.serviceCharge ?? st.charge ?? 0}
+                    </option>
+                  ))}
                 </select>
               </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Total Service Charge (৳) *
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={formData.totalServiceCharge}
+                  onChange={(e) => setFormData({ ...formData, totalServiceCharge: e.target.value })}
+                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Minimum Required Payment (৳) *
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  max={formData.totalServiceCharge || undefined}
+                  value={formData.minRequiredPayment}
+                  onChange={(e) => setFormData({ ...formData, minRequiredPayment: e.target.value })}
+                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Due after minimum: ৳{Math.max(0, (Number(formData.totalServiceCharge) || 0) - (Number(formData.minRequiredPayment) || 0)).toLocaleString()}
+                </p>
+              </div>
+
+              {!editingId && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Initial Payment Received (৳)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    max={formData.totalServiceCharge || undefined}
+                    value={formData.initialPayment}
+                    onChange={(e) => setFormData({ ...formData, initialPayment: e.target.value })}
+                    className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Remaining due: ৳{Math.max(0, (Number(formData.totalServiceCharge) || 0) - (Number(formData.initialPayment) || 0)).toLocaleString()}
+                    {' · '}
+                    <span
+                      className={`font-semibold ${paymentStatusColor(
+                        computePaymentStatus(
+                          Number(formData.totalServiceCharge) || 0,
+                          Number(formData.initialPayment) || 0
+                        )
+                      )}`}
+                    >
+                      {paymentStatusLabel(
+                        computePaymentStatus(
+                          Number(formData.totalServiceCharge) || 0,
+                          Number(formData.initialPayment) || 0
+                        )
+                      )}
+                    </span>
+                  </p>
+                </div>
+              )}
+
+              {!editingId && (Number(formData.initialPayment) || 0) > 0 && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Payment Method
+                  </label>
+                  <select
+                    value={formData.paymentMethod}
+                    onChange={(e) => setFormData({ ...formData, paymentMethod: e.target.value })}
+                    className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="CASH">Cash</option>
+                    <option value="BKASH">bKash</option>
+                    <option value="NAGAD">Nagad</option>
+                    <option value="ROCKET">Rocket</option>
+                    <option value="HUB_DIRECT">Hub Direct</option>
+                  </select>
+                </div>
+              )}
+
+              {editingId && (Number((aptBeingEdited as any)?.amountPaid) || 0) > 0 && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Already Received
+                  </label>
+                  <p className="text-sm text-emerald-700 font-semibold px-4 py-2 border border-emerald-200 bg-emerald-50 rounded-lg">
+                    {formatBDT((aptBeingEdited as any).amountPaid)}{' '}
+                    <span
+                      className={`px-2 py-0.5 text-xs rounded-full font-medium ${paymentStatusColor(
+                        (aptBeingEdited as any).paymentStatus
+                      )}`}
+                    >
+                      {paymentStatusLabel((aptBeingEdited as any).paymentStatus)}
+                    </span>
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Payments are managed from the task / payments pages.
+                  </p>
+                </div>
+              )}
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -390,6 +613,31 @@ export default function AppointmentsClient({ initialAppointments, doctors }: App
                     </option>
                   ))}
                 </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Serial Number
+                </label>
+                <input
+                  type="text"
+                  value={formData.serialNo}
+                  onChange={(e) => setFormData({ ...formData, serialNo: e.target.value })}
+                  placeholder="e.g. 12"
+                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Serial Time
+                </label>
+                <input
+                  type="datetime-local"
+                  value={formData.serialTime}
+                  onChange={(e) => setFormData({ ...formData, serialTime: e.target.value })}
+                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
               </div>
             </div>
 
@@ -550,6 +798,42 @@ export default function AppointmentsClient({ initialAppointments, doctors }: App
                 <p className="text-sm">
                   <span className="font-medium">Fee:</span> {apt.serviceFee} BDT
                 </p>
+                <div className="pt-2 border-t border-gray-100">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="font-medium text-gray-700">Payment</span>
+                    <span className="text-gray-900 font-semibold">
+                      {formatBDT((apt.amountPaid || 0) + (apt.remainingDue || 0))}
+                      {' · '}
+                      {formatBDT(apt.amountPaid || 0)} paid
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs text-gray-500 mt-0.5">
+                    <span>Total: {formatBDT(apt.totalServiceCharge || 0)} BDT</span>
+                    <span>
+                      {paymentStatusLabel(apt.paymentStatus || 'UNPAID')}
+                    </span>
+                  </div>
+                  <div className="mt-1">
+                    <span
+                      className={`px-1.5 py-0.5 text-xs rounded-full font-medium ${paymentStatusColor(
+                        apt.paymentStatus || 'UNPAID'
+                      )}`}
+                    >
+                      {paymentStatusLabel(apt.paymentStatus || 'UNPAID')}
+                    </span>
+                    {apt.paymentMethod && (
+                      <span className="ml-2 text-xs text-gray-500">
+                        ({apt.paymentMethod})
+                      </span>
+                    )}
+                  </div>
+                </div>
+                {apt.serialNo && (
+                  <p className="text-sm">
+                    <span className="font-medium">Serial:</span> {apt.serialNo}
+                    {apt.serialTime ? ` · ${new Date(apt.serialTime).toLocaleString()}` : ''}
+                  </p>
+                )}
                 {apt.status === 'completed' && apt.discountPercent != null && (
                   <p className="text-sm">
                     <span className="font-medium">Discount:</span>{' '}

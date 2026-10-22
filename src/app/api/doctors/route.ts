@@ -17,7 +17,10 @@ export async function GET() {
       cache: 'no-store',
     });
 
-    const data = await response.json();
+    const data = await response.json().catch(() => ({
+      success: false,
+      message: 'Failed to fetch doctors',
+    }));
     return NextResponse.json(data);
   } catch (error) {
     return NextResponse.json(
@@ -48,7 +51,10 @@ export async function POST(req: Request) {
       body: JSON.stringify(body),
     });
 
-    const data = await response.json();
+    const data = await response.json().catch(() => ({
+      success: false,
+      message: 'Failed to create doctor',
+    }));
     return NextResponse.json(data);
   } catch (error) {
     return NextResponse.json(

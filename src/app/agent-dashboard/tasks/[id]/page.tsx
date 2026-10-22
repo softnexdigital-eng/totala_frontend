@@ -14,6 +14,8 @@ interface Task {
   discountAmount?: number;
   transactionId?: string;
   bkashNumber?: string;
+  prescriptions?: string[];
+  invoiceUrl?: string | null;
   receiveTime?: string;
   startTime?: string;
   endTime?: string;
@@ -45,15 +47,6 @@ interface Payment {
   notes?: string;
 }
 
-const TASK_STATUSES = [
-  { value: 'ASSIGNED', label: 'Assigned' },
-  { value: 'RECEIVED', label: 'Received' },
-  { value: 'IN_PROGRESS', label: 'In Progress' },
-  { value: 'SERVICE_COMPLETED', label: 'Service Completed' },
-  { value: 'COMPLETED', label: 'Completed' },
-  { value: 'CANCELLED', label: 'Cancelled' },
-];
-
 const STATUS_COLORS: Record<string, string> = {
   PENDING: 'bg-gray-100 text-gray-800',
   ASSIGNED: 'bg-blue-100 text-blue-800',
@@ -84,7 +77,6 @@ export default function AgentTaskDetailPage() {
   const [timerRunning, setTimerRunning] = useState(false);
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [showDiscountForm, setShowDiscountForm] = useState(false);
-  const [endForm, setEndForm] = useState({ discountAmount: '', transactionId: '', bkashNumber: '' });
   const [paymentForm, setPaymentForm] = useState({
     amount: '',
     paymentMethod: 'CASH',
@@ -96,6 +88,65 @@ export default function AgentTaskDetailPage() {
     discountPercent: '',
     discountAmount: '',
   });
+  const [prescriptionFiles, setPrescriptionFiles] = useState<File[]>([]);
+  const [invoiceFile, setInvoiceFile] = useState<File | null>(null);
+  const [uploadingDocs, setUploadingDocs] = useState(false);
+
+  /**
+   * Freeze workflow: after the service-charge payment is submitted the task
+   * turns `SERVICE_COMPLETED` (disabled) and the agent is frozen until the Super
+   * Admin clicks End on the dashboard, so no document edits are allowed either.
+   */
+  const frozen = task?.taskStatus === 'SERVICE_COMPLETED';
+  const canUploadDocs = task?.taskStatus === 'IN_PROGRESS';
+  const remainingDue = task
+    ? task.appointment.serviceFee -
+      (task.payments?.reduce((sum, p) => sum + p.amount, 0) || 0)
+    : 0;
+
+  const uploadDocsToBackend = async (kind: 'prescriptions' | 'receipts', file: File) => {
+    const form = new FormData();
+    form.append('file', file);
+    const res = await fetch(`/api/upload?type=${kind}`, {
+      method: 'POST',
+      headers: { ...authHeaders() },
+      body: form,
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.message || 'Upload failed');
+    return (data.data?.url || data.url) as string;
+  };
+
+  const handleUploadPrescriptions = async () => {
+    if (!task || prescriptionFiles.length === 0) return;
+    setUploadingDocs(true);
+    try {
+      const urls: string[] = [];
+      for (const file of prescriptionFiles) {
+        const url = await uploadDocsToBackend('prescriptions', file);
+        urls.push(url);
+      }
+      const res = await fetch(`/api/tasks/${taskId}/start`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        body: JSON.stringify({
+          prescriptions: [...(task.prescriptions || []), ...urls],
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success('Prescription uploaded');
+        setTask(data.data);
+        setPrescriptionFiles([]);
+      } else {
+        toast.error(data.message || 'Failed to save prescription');
+      }
+    } catch {
+      toast.error('Prescription upload failed');
+    } finally {
+      setUploadingDocs(false);
+    }
+  };
 
   const getAgentToken = () => {
     const match = document.cookie.match(/(?:^|; )agentToken=([^;]+)/);
@@ -194,35 +245,11 @@ export default function AgentTaskDetailPage() {
     }
   };
 
-  const handleEndTask = async () => {
-    setUpdating(true);
-    try {
-      const res = await fetch(`/api/tasks/${taskId}/end`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          ...authHeaders(),
-        },
-        body: JSON.stringify({
-          discountAmount: parseFloat(endForm.discountAmount) || 0,
-          transactionId: endForm.transactionId,
-          bkashNumber: endForm.bkashNumber,
-        }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        toast.success('Task ended');
-        setTask(data.data);
-        setEndForm({ discountAmount: '', transactionId: '', bkashNumber: '' });
-      } else {
-        toast.error(data.message || 'Failed to end task');
-      }
-    } catch {
-      toast.error('Something went wrong');
-    } finally {
-      setUpdating(false);
-    }
-  };
+  /**
+   * Agent never ends a task: "End" is a Super Admin action on the dashboard.
+   * The agent's last step is submitting the service-charge payment, which
+   * disables this task and freezes the agent until the Super Admin ends it.
+   */
 
   const handleStatusUpdate = async (taskStatus: string) => {
     setUpdating(true);
@@ -244,6 +271,38 @@ export default function AgentTaskDetailPage() {
       }
     } catch {
       toast.error('Something went wrong');
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  /**
+   * Agent End Task — submits the End request; the backend accepts it when
+   * the service-charge payment has been submitted (taskStatus ===
+   * SERVICE_COMPLETED). If the backend rejects the call, the error is shown.
+   */
+  const handleEndTask = async () => {
+    if (!confirm('আপনি কি নিশ্চিত যে এই টাস্ক শেষ করতে চান?')) return;
+    setUpdating(true);
+    try {
+      const res = await fetch(`/api/tasks/${taskId}/end`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...authHeaders(),
+        },
+        credentials: 'include',
+        body: JSON.stringify({ taskStatus: 'COMPLETED', endTime: new Date().toISOString() }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success('টাস্ক শেষ করা হলো — ফ্রিজ উঠেছে');
+        setTask(data.data);
+      } else {
+        toast.error(data.message || 'টাস্ক শেষ করতে সমস্যা হয়েছে');
+      }
+    } catch {
+      toast.error('টাস্ক শেষ করতে সমস্যা হয়েছে');
     } finally {
       setUpdating(false);
     }
@@ -299,7 +358,9 @@ export default function AgentTaskDetailPage() {
       });
       const data = await res.json();
       if (data.success) {
-        toast.success('Payment added successfully');
+        toast.success(
+          'Payment submitted — task disabled. সুপার অ্যাডমিন End করলেই আবার চালু হবে'
+        );
         setShowPaymentForm(false);
         setPaymentForm({
           amount: '',
@@ -314,6 +375,31 @@ export default function AgentTaskDetailPage() {
       }
     } catch {
       toast.error('Something went wrong');
+    }
+  };
+
+  const handleUploadInvoice = async () => {
+    if (!task || !invoiceFile) return;
+    setUploadingDocs(true);
+    try {
+      const url = await uploadDocsToBackend('receipts', invoiceFile);
+      const res = await fetch(`/api/tasks/${taskId}/start`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        body: JSON.stringify({ invoiceUrl: url }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success('Test invoice uploaded');
+        setTask(data.data);
+        setInvoiceFile(null);
+      } else {
+        toast.error(data.message || 'Failed to save invoice');
+      }
+    } catch {
+      toast.error('Invoice upload failed');
+    } finally {
+      setUploadingDocs(false);
     }
   };
 
@@ -402,8 +488,38 @@ export default function AgentTaskDetailPage() {
                   Started: {formatDate(task.startTime)}
                 </p>
               )}
+              {/*
+                Timer fix: after payment submit (SERVICE_COMPLETED) or super-admin
+                End (COMPLETED) the live timer stops — the TOTAL time it ran is
+                still shown here instead of disappearing completely.
+              */}
+              {(task.taskStatus === 'SERVICE_COMPLETED' || task.taskStatus === 'COMPLETED') &&
+                task.startTime &&
+                task.endTime && (
+                  <div className="mt-2 inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-sm font-medium text-slate-800">
+                    <span className="font-mono font-semibold">
+                      {formatElapsed(
+                        Math.max(
+                          0,
+                          Math.floor(
+                            (new Date(task.endTime).getTime() - new Date(task.startTime).getTime()) /
+                              1000
+                          )
+                        )
+                      )}
+                    </span>
+                    <span className="text-xs text-slate-600">মোট টাইমার চলেছে (total time)</span>
+                  </div>
+                )}
               {task.taskStatus === 'SERVICE_COMPLETED' && (
-                <p className="text-green-700 text-sm mt-1 font-medium">This task was completely ended</p>
+                <p className="text-slate-800 text-sm mt-1 font-medium">
+                  Payment জমা হয়েছে — টাস্ক disable, সুপার অ্যাডমিন End pending।
+                </p>
+              )}
+              {task.taskStatus === 'COMPLETED' && (
+                <p className="text-green-700 text-sm mt-1 font-medium">
+                  সুপার অ্যাডমিন End করেছে — টাস্ক completed, freeze lifted।
+                </p>
               )}
             </div>
             <span
@@ -486,9 +602,96 @@ export default function AgentTaskDetailPage() {
               </div>
             </div>
 
+            {/* Doctor Prescription - visible after patient received (timer running) */}
+            {(task.taskStatus === 'IN_PROGRESS' || task.taskStatus === 'SERVICE_COMPLETED') && (
+              <div className="bg-white rounded-lg shadow p-6">
+                <h2 className="text-xl font-semibold mb-4">Doctor Prescription</h2>
+                {task.prescriptions && task.prescriptions.length > 0 ? (
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4">
+                    {task.prescriptions.map((url, i) => (
+                      <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="block border rounded-lg overflow-hidden hover:shadow">
+                        {url.match(/\.(jpg|jpeg|png|webp|gif)(\?|$)/i) ? (
+                          <img src={url} alt={`Prescription ${i + 1}`} className="w-full h-32 object-cover" />
+                        ) : (
+                          <div className="p-4 text-sm text-blue-600 underline break-all">Prescription {i + 1} (PDF/Doc) — View</div>
+                        )}
+                      </a>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-gray-500 text-sm mb-4">No prescription uploaded yet</p>
+                )}
+                {task.taskStatus === 'IN_PROGRESS' && (
+                  <div className="flex flex-wrap items-center gap-3">
+                    <input
+                      type="file"
+                      multiple
+                      accept="image/*,.pdf,.doc,.docx"
+                      onChange={(e) => setPrescriptionFiles(Array.from(e.target.files || []))}
+                      className="text-sm"
+                    />
+                    <button
+                      onClick={handleUploadPrescriptions}
+                      disabled={uploadingDocs || prescriptionFiles.length === 0}
+                      className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:opacity-50"
+                    >
+                      {uploadingDocs ? 'Uploading...' : 'Upload Prescription'}
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Test Invoice - required BEFORE giving discount */}
+            {(task.taskStatus === 'IN_PROGRESS' || task.taskStatus === 'SERVICE_COMPLETED') && (
+              <div className="bg-white rounded-lg shadow p-6">
+                <h2 className="text-xl font-semibold mb-4">Test Invoice</h2>
+                {task.invoiceUrl ? (
+                  <a href={task.invoiceUrl} target="_blank" rel="noopener noreferrer" className="block border rounded-lg overflow-hidden hover:shadow mb-4">
+                    {task.invoiceUrl.match(/\.(jpg|jpeg|png|webp|gif)(\?|$)/i) ? (
+                      <img src={task.invoiceUrl} alt="Test Invoice" className="w-full max-h-64 object-contain bg-gray-50" />
+                    ) : (
+                      <div className="p-4 text-sm text-blue-600 underline break-all">View Invoice (PDF/Doc)</div>
+                    )}
+                  </a>
+                ) : (
+                  <p className="text-gray-500 text-sm mb-4">No invoice uploaded yet — upload it before giving discount</p>
+                )}
+                {task.taskStatus === 'IN_PROGRESS' && (
+                  <div className="flex flex-wrap items-center gap-3">
+                    <input
+                      type="file"
+                      accept="image/*,.pdf,.doc,.docx"
+                      onChange={(e) => setInvoiceFile(e.target.files?.[0] || null)}
+                      className="text-sm"
+                    />
+                    <button
+                      onClick={handleUploadInvoice}
+                      disabled={uploadingDocs || !invoiceFile}
+                      className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 disabled:opacity-50"
+                    >
+                      {uploadingDocs ? 'Uploading...' : 'Upload Invoice'}
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Actions */}
             <div className="bg-white rounded-lg shadow p-6">
               <h2 className="text-xl font-semibold mb-4">Actions</h2>
+
+              {frozen && (
+                <div className="mb-4 rounded-lg border border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+                  <p className="font-semibold text-slate-900">Task disabled (freeze)</p>
+                  <p className="mt-1">
+                    সার্ভিস চার্জ পেমেন্ট জমা হয়েছে। এখন সুপার অ্যাডমিন ড্যাশবোর্ড থেকে
+                    End না করা পর্যন্ত এই টাস্কে কোনো পরিবর্তন করা যাবে না এবং আপনি
+                    freeze থাকবেন।
+                  </p>
+                </div>
+              )}
+
               <div className="flex flex-wrap gap-3">
                 {task.taskStatus === 'ASSIGNED' && (
                   <button
@@ -508,34 +711,69 @@ export default function AgentTaskDetailPage() {
                     Receive Patient
                   </button>
                 )}
-                {task.taskStatus === 'IN_PROGRESS' && (
-                  <button
-                    onClick={handleEndTask}
-                    disabled={updating || !endForm.discountAmount || !endForm.transactionId || !endForm.bkashNumber}
-                    className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50"
-                  >
-                    End Task
-                  </button>
-                )}
                 <button
                   onClick={() => setShowDiscountForm(true)}
-                  className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700"
+                  disabled={frozen || (task.taskStatus === 'IN_PROGRESS' && !task.invoiceUrl)}
+                  title={
+                    frozen
+                      ? 'পেমেন্ট জমা হয়েছে — টাস্ক disable, সুপার অ্যাডমিন End করলে চালু হবে'
+                      : task.taskStatus === 'IN_PROGRESS' && !task.invoiceUrl
+                      ? 'Upload the test invoice first'
+                      : undefined
+                  }
+                  className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50"
                 >
                   Add Discount
                 </button>
-                {(!task.payments || task.payments.length === 0) && (
-                  <button
-                    onClick={() => setShowPaymentForm(true)}
-                    className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
-                  >
-                    Add Payment
-                  </button>
-                )}
-                {task.payments && task.payments.length > 0 && (
-                  <span className="text-sm text-gray-500 italic">
-                    Payment already added for this task
+                {task.taskStatus === 'IN_PROGRESS' && !task.invoiceUrl && (
+                  <span className="text-sm text-amber-700 italic">
+                    Upload the test invoice above before giving discount
                   </span>
                 )}
+                {remainingDue > 0 &&
+                  (task.taskStatus === 'ASSIGNED' ||
+                    task.taskStatus === 'RECEIVED' ||
+                    task.taskStatus === 'IN_PROGRESS') && (
+                    <button
+                      onClick={() => setShowPaymentForm(true)}
+                      className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
+                    >
+                      Add Payment
+                    </button>
+                  )}
+                {task.payments && task.payments.length > 0 && remainingDue > 0 && (
+                  <span className="text-sm text-slate-700 italic">
+                    Partial payment submitted — বাকি টাকা পরিশোধ করতে Add Payment দিন।
+                  </span>
+                )}
+                {task.payments && task.payments.length > 0 && remainingDue <= 0 && (
+                  <span className="text-sm text-slate-700 italic">
+                    Service charge payment already submitted — task disabled, সুপার
+                    অ্যাডমিন End pending।
+                  </span>
+                )}
+                {!frozen &&
+                  (task.taskStatus === 'ASSIGNED' ||
+                    task.taskStatus === 'RECEIVED' ||
+                    task.taskStatus === 'IN_PROGRESS') && (
+                    <button
+                      onClick={() => handleStatusUpdate('CANCELLED')}
+                      disabled={updating}
+                      className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
+                    >
+                      Cancel Task
+                    </button>
+                  )}
+                {/* End Task is Super Admin only — agent should not see this button */}
+                {/* {task.taskStatus === 'SERVICE_COMPLETED' && (
+                  <button
+                    onClick={handleEndTask}
+                    disabled={updating}
+                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50"
+                  >
+                    End Task
+                  </button>
+                )} */}
               </div>
             </div>
           </div>
@@ -665,6 +903,11 @@ export default function AgentTaskDetailPage() {
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
               <h3 className="text-xl font-semibold mb-4">Add Payment</h3>
+              <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                Cash হোক বা bKash / Nagad / Rocket — Submit করলেই এই টাস্ক disable হয়ে
+                যাবে এবং সুপার অ্যাডমিন dashboard থেকে End না করা পর্যন্ত আপনি freeze
+                থাকবেন (নতুন বুকিং বন্ধ)।
+              </div>
               <form onSubmit={handleAddPayment} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
