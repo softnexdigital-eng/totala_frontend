@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { forwardClientHeaders } from '@/lib/serverProxy';
+import { getAuthToken } from '@/lib/serverAuth';
 
 const BACKEND = process.env.BACKEND_URL || 'http://localhost:5000';
 
@@ -10,9 +11,17 @@ const BACKEND = process.env.BACKEND_URL || 'http://localhost:5000';
 export async function POST(req: Request) {
   try {
     const body = await req.json().catch(() => ({}));
+    const token = await getAuthToken();
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      ...forwardClientHeaders(req),
+    };
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
     const res = await fetch(`${BACKEND}/api/payment-gateway/verify`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...forwardClientHeaders(req) },
+      headers,
       body: JSON.stringify(body),
       cache: 'no-store',
     });

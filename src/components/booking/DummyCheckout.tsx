@@ -48,6 +48,7 @@ export default function DummyCheckout({ amount, onVerified, onCancel }: DummyChe
       const checkoutRes = await fetch('/api/payment-gateway/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ method, amount: payable }),
       });
       const checkoutJson = await checkoutRes.json();
@@ -60,6 +61,7 @@ export default function DummyCheckout({ amount, onVerified, onCancel }: DummyChe
       const verifyRes = await fetch('/api/payment-gateway/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ method, amount: payable, txnId: session.txnId, forceResult }),
       });
       const verifyJson = await verifyRes.json();
