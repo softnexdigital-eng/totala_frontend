@@ -87,7 +87,10 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="min-h-screen bg-[#f7fcf9] p-0 md:p-4 lg:p-6">
+    <main
+      className="min-h-screen bg-[#f7fcf9] p-0 md:p-4 lg:p-6 select-none"
+      onContextMenu={(e) => e.preventDefault()}
+    >
       <div className="min-h-screen md:min-h-[calc(100vh-48px)] w-full overflow-hidden rounded-none md:rounded-[28px] border border-[#dfeee5] bg-white shadow-sm">
 
         <div className="grid min-h-screen md:min-h-[calc(100vh-48px)] lg:grid-cols-[1.02fr_0.98fr]">
@@ -253,6 +256,34 @@ export default function LoginPage() {
 
                 {/* Header */}
                 <div className="text-center">
+
+                  {/* Mobile-only dakdin logo (desktop has full branding section) */}
+                  <div className="mx-auto mb-4 flex items-center gap-3 lg:hidden">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#159447]">
+                      <svg
+                        width="24"
+                        height="24"
+                        viewBox="0 0 32 32"
+                        fill="none"
+                      >
+                        <path
+                          d="M16 4C9.373 4 4 8.925 4 15c0 3.56 1.84 6.73 4.68 8.72V28l4.35-2.17c.96.24 1.96.37 2.97.37 6.627 0 12-4.925 12-11S22.627 4 16 4Z"
+                          stroke="white"
+                          strokeWidth="2.4"
+                          strokeLinejoin="round"
+                        />
+                        <path
+                          d="M16 10v10M11 15h10"
+                          stroke="white"
+                          strokeWidth="2.6"
+                          strokeLinecap="round"
+                        />
+                      </svg>
+                    </div>
+                    <h1 className="text-3xl font-extrabold leading-none tracking-[-1px] text-[#159447]">
+                      dakdin
+                    </h1>
+                  </div>
 
                   <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#eaf8ed]">
                     {step === 'login' ? (

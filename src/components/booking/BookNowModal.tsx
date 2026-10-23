@@ -133,12 +133,12 @@ export default function BookNowModal({
     serviceNeeded: initialService || '',
     preferredDate: '',
     preferredTime: '',
-     hospital: '',
-     bookingReason: '',
-     additionalNote: '',
-     doctorId: initialDoctor?.id || '',
-     doctorName: initialDoctor?.name || '',
-   });
+    hospital: '',
+    bookingReason: '',
+    additionalNote: '',
+    doctorId: initialDoctor?.id || '',
+    doctorName: initialDoctor?.name || '',
+  });
 
   const [medicines, setMedicines] = useState<Medicine[]>([]);
   const [medicineName, setMedicineName] = useState('');
@@ -173,9 +173,9 @@ export default function BookNowModal({
   // server-side (backend also rejects submits <3s after formOpenedAt).
   const [honeypot, setHoneypot] = useState('');
 
-  /* ---------------- Mandatory initial-payment (dummy gateway) --------------- */
+  /* ---------------- Mandatory initial-payment (bKash) --------------- */
   // Selected service pricing snapshot → required initial payment. Submit stays
-  // disabled until the dummy gateway confirms a successful payment.
+  // disabled until the bKash gateway confirms a successful payment.
   const [paymentMethod, setPaymentMethod] = useState('');
   const [transactionId, setTransactionId] = useState('');
   const [paymentVerified, setPaymentVerified] = useState(false);
@@ -186,6 +186,7 @@ export default function BookNowModal({
   // Single-use token guard: double Enter / StrictMode double-invoke would
   // replay the token and get flagged as suspicious (403, no booking stored).
   const submitInflight = useRef(false);
+  const hasAutoSubmitted = useRef(false);
 
   useEffect(() => {
     const fetchHospitals = async () => {
@@ -334,6 +335,7 @@ export default function BookNowModal({
     setTransactionId('');
     setPaymentVerified(false);
     setPaidAmount(0);
+    hasAutoSubmitted.current = false;
   };
 
   const serviceNeededLower = (form.serviceNeeded || '').toLowerCase();
@@ -436,12 +438,19 @@ export default function BookNowModal({
     }
     if (!validate()) return;
 
-    // Mandatory payment gate: when the service charges, the dummy gateway must
+    // Mandatory payment gate: when the service charges, the bKash gateway must
     // have confirmed a successful initial payment before submitting.
     if (paymentRequired && !paymentVerified) {
       toast.error(
         `Please complete the required initial payment of ${formatBDT(bookingMinPayment)} before submitting`
       );
+      return;
+    }
+
+    // When bKash payment is verified, skip OTP and create the booking directly.
+    if (!bookingToken && paymentVerified) {
+      toast.loading('Creating your booking…', { id: 'booking-submit' });
+      await submitBooking('');
       return;
     }
 
@@ -461,6 +470,15 @@ export default function BookNowModal({
 
     await submitBooking(bookingToken);
   };
+
+  // Auto-submit booking after bKash payment is verified.
+  useEffect(() => {
+    if (paymentVerified && !bookingToken && !submitInflight.current && !loading && !hasAutoSubmitted.current) {
+      hasAutoSubmitted.current = true;
+      toast.loading('Creating your booking…', { id: 'booking-submit' });
+      void submitBooking('');
+    }
+  }, [paymentVerified, bookingToken, loading]);
 
   /**
    * Anti-fraud step 2: verify the OTP, then create the booking with the
@@ -549,7 +567,7 @@ export default function BookNowModal({
           phone: form.patientPhone || undefined,
           email: form.patientEmail || undefined,
         });
-        toast.success(result.message || 'Booking request submitted successfully!');
+        toast.success(result.message || 'Booking request submitted successfully!', { id: 'booking-submit' });
         if (result.data?.autoCreatedPatient) {
           toast('A new patient profile was created automatically', { icon: '🆕' });
         } else if (result.data?.patient?.id) {
@@ -558,7 +576,7 @@ export default function BookNowModal({
         onSubmitted?.();
         onClose();
       } else {
-        toast.error(result.message || 'Failed to submit booking request');
+        toast.error(result.message || 'Failed to submit booking request', { id: 'booking-submit' });
         // Token expired / already consumed / email mismatch / flagged as
         // suspicious (single-use token replayed, e.g. double submit) — back
         // to the form so the visitor can request a fresh OTP.
@@ -572,17 +590,33 @@ export default function BookNowModal({
         }
       }
     } catch {
-      toast.error('Something went wrong. Please try again.');
+      toast.error('Something went wrong. Please try again.', { id: 'booking-submit' });
     } finally {
       submitInflight.current = false;
       setLoading(false);
     }
   };
 
-  const inputCls =
-    'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition';
-  const inputErr =
-    'w-full px-4 py-2.5 border border-red-400 rounded-lg focus:ring-2 focus:ring-red-500 outline-none transition';
+  /* ------------------------------------------------------------------ */
+  /* Compact "social app" design tokens (Facebook-like sizing).          */
+  /* Fields: 40px high, 15px text, 6px radius, thin gray border.         */
+  /* Labels: 13px semibold. Buttons: 40px high, 15px text.               */
+  /* ------------------------------------------------------------------ */
+  const fieldBase =
+    'block w-full min-w-0 max-w-full appearance-none rounded-md border bg-white px-3 text-[15px] text-gray-900 outline-none transition placeholder:text-gray-400 sm:text-sm';
+  const fieldOk = 'border-gray-300 focus:border-green-600 focus:ring-1 focus:ring-green-600';
+  const fieldBad = 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500';
+  const inputCls = `${fieldBase} h-10 sm:h-10 ${fieldOk}`;
+  const inputErr = `${fieldBase} h-10 sm:h-10 ${fieldBad}`;
+  const areaCls = `${fieldBase} resize-none py-2 ${fieldOk}`;
+  const areaErr = `${fieldBase} resize-none py-2 ${fieldBad}`;
+  const selectCls = `${inputCls} cursor-pointer pr-8 bg-[url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2214%22 height=%2214%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%236b7280%22 stroke-width=%222.5%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22><polyline points=%226 9 12 15 18 9%22/></svg>')] bg-no-repeat bg-[right_0.6rem_center]`;
+  const labelCls = 'mb-1 block text-[13px] font-semibold text-gray-600';
+  const errCls = 'mt-1 text-xs text-red-600';
+  const cardCls = 'rounded-lg bg-white p-3 shadow-sm ring-1 ring-black/5 sm:p-4';
+  const cardTitleCls = 'mb-3 flex items-center gap-2 text-[15px] font-bold text-gray-900';
+  const iconBubble =
+    'flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-green-50 text-green-600';
 
   // Lock background scroll + close on Escape while the modal is open.
   useEffect(() => {
@@ -599,17 +633,18 @@ export default function BookNowModal({
   }, [onClose]);
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 p-3 sm:p-4">
-      <div className="relative mx-auto my-4 sm:my-8 flex max-h-[calc(100dvh-2rem)] sm:max-h-[calc(100dvh-4rem)] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
-        {/* Header */}
-        <div className="flex shrink-0 items-center justify-between rounded-t-2xl bg-gradient-to-r from-green-600 to-emerald-600 px-4 py-3 sm:px-6 sm:py-4 text-white">
-          <div>
-            <h2 className="text-base sm:text-xl font-semibold">
-              {agent?.name ? `Book Now with ${agent.name}` : 'Booking Request'}
+    // Mobile: full-screen sheet. Desktop (sm+): centered card with backdrop.
+    <div className="fixed inset-0 z-50 bg-black/50 sm:overflow-y-auto sm:p-4">
+      <div className="relative mx-auto flex h-[100dvh] w-full flex-col overflow-hidden bg-gray-100 shadow-2xl sm:my-8 sm:h-auto sm:max-h-[calc(100dvh-4rem)] sm:max-w-xl sm:rounded-xl">
+        {/* Header: white bar, small bold title, gray round close button */}
+        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-gray-200 bg-white px-3 pb-2.5 pt-[max(0.625rem,env(safe-area-inset-top))] sm:px-4 sm:py-3">
+          <div className="min-w-0 flex-1">
+            <h2 className="truncate text-[17px] font-bold leading-tight text-gray-900">
+              {agent?.name ? `Book with ${agent.name}` : 'Booking Request'}
             </h2>
             <Link
               href="/medicine-booking"
-              className="text-xs text-white/80 hover:text-white ml-2"
+              className="text-xs font-medium text-green-600 hover:underline"
               onClick={onClose}
             >
               Book Medicine Online
@@ -619,7 +654,7 @@ export default function BookNowModal({
             type="button"
             onClick={onClose}
             disabled={loading}
-            className="rounded-full p-1 text-white/80 hover:text-white hover:bg-white/10 transition"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-200 text-gray-600 transition hover:bg-gray-300 active:bg-gray-300"
             aria-label="Close"
           >
             <X className="h-5 w-5" />
@@ -630,12 +665,12 @@ export default function BookNowModal({
           onSubmit={step === 'otp' ? handleVerifyAndSubmit : handleSubmit}
           className="flex min-h-0 flex-1 flex-col"
         >
-          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6">
-          
+          <div className="relative min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain p-3 sm:p-4">
+
           {frozen && (
-            <div className="mb-6 rounded-xl border border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-700">
-              <p className="font-semibold text-slate-900">This agent is frozen</p>
-              <p className="mt-1">
+            <div className="rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-[13px] leading-relaxed text-slate-700">
+              <p className="font-bold text-slate-900">This agent is frozen</p>
+              <p className="mt-0.5">
                 আগের টাস্কের সার্ভিস চার্জ পেমেন্ট জমা হয়েছে, কিন্তু সুপার অ্যাডমিন
                 এখনো End করেননি। তাই এই এজেন্টের জন্য নতুন বুকিং নেওয়া যাবে না।
               </p>
@@ -661,75 +696,75 @@ export default function BookNowModal({
 
           {step === 'otp' ? (
             /* ---------- Step 2: email OTP verification ---------- */
-            <div className="space-y-6">
-              <div className="rounded-xl border border-green-200 bg-green-50 p-4 sm:p-6">
-                <h3 className="mb-2 text-sm font-semibold text-green-800 flex items-center gap-2">
-                  <ShieldCheck className="h-4 w-4 text-green-600" />
-                  Verify your email
-                </h3>
-                <p className="text-sm text-gray-700">
-                  We sent a 6-digit OTP to{' '}
-                  <span className="font-semibold">{form.patientEmail}</span>. Enter
-                  it below to confirm your booking request.
-                </p>
+            <div className={cardCls}>
+              <h3 className={cardTitleCls}>
+                <span className={iconBubble}>
+                  <ShieldCheck className="h-4 w-4" />
+                </span>
+                Verify your email
+              </h3>
+              <p className="break-words text-[13px] leading-relaxed text-gray-600">
+                We sent a 6-digit OTP to{' '}
+                <span className="break-all font-semibold text-gray-900">{form.patientEmail}</span>.
+                Enter it below to confirm your booking request.
+              </p>
 
-                <label className="mt-4 block text-sm font-medium text-gray-700 mb-1">
-                  Email OTP *
-                </label>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  autoComplete="one-time-code"
-                  maxLength={6}
-                  value={otp}
-                  onChange={(e) => {
-                    setOtp(e.target.value.replace(/\D/g, '').slice(0, 6));
-                    if (errors.otp) setErrors((prev) => ({ ...prev, otp: undefined }));
-                  }}
-                  className={`text-center tracking-[0.5em] ${
-                    errors.otp ? inputErr : inputCls
-                  } text-lg`}
-                  placeholder="••••••"
-                  autoFocus
-                />
-                {errors.otp && (
-                  <p className="mt-1 text-xs text-red-600">{errors.otp}</p>
-                )}
+              <label className={`${labelCls} mt-4`}>
+                Email OTP *
+              </label>
+              <input
+                type="text"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                maxLength={6}
+                value={otp}
+                onChange={(e) => {
+                  setOtp(e.target.value.replace(/\D/g, '').slice(0, 6));
+                  if (errors.otp) setErrors((prev) => ({ ...prev, otp: undefined }));
+                }}
+                className={`text-center text-xl font-semibold tracking-[0.4em] ${
+                  errors.otp ? inputErr : inputCls
+                } !h-12`}
+                placeholder="••••••"
+                autoFocus
+              />
+              {errors.otp && <p className={errCls}>{errors.otp}</p>}
 
-                <div className="mt-4 flex flex-wrap gap-3">
-                  <button
-                    type="button"
-                    onClick={() => requestOtp(form.patientEmail.trim())}
-                    disabled={sendingOtp}
-                    className="text-sm font-medium text-green-700 hover:underline disabled:opacity-50"
-                  >
-                    {sendingOtp ? 'Sending…' : 'Resend OTP'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setStep('form')}
-                    className="text-sm font-medium text-gray-500 hover:underline"
-                  >
-                    ← Change details
-                  </button>
-                </div>
-                <p className="mt-3 text-xs text-gray-500">
-                  Didn&apos;t receive it? Check spam or resend. OTP is valid for 10
-                  minutes.
-                </p>
+              <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-1">
+                <button
+                  type="button"
+                  onClick={() => requestOtp(form.patientEmail.trim())}
+                  disabled={sendingOtp}
+                  className="py-1.5 text-[13px] font-semibold text-green-600 hover:underline disabled:opacity-50"
+                >
+                  {sendingOtp ? 'Sending…' : 'Resend OTP'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStep('form')}
+                  className="py-1.5 text-[13px] font-semibold text-gray-500 hover:underline"
+                >
+                  ← Change details
+                </button>
               </div>
+              <p className="mt-1 text-xs leading-relaxed text-gray-500">
+                Didn&apos;t receive it? Check spam or resend. OTP is valid for 10
+                minutes.
+              </p>
             </div>
           ) : (
-          <div className="space-y-6">
+          <>
             {/* Patient Information */}
-            <div>
-              <h3 className="mb-4 text-sm font-semibold text-gray-700 flex items-center gap-2">
-                <Stethoscope className="h-4 w-4 text-green-600" />
+            <div className={cardCls}>
+              <h3 className={cardTitleCls}>
+                <span className={iconBubble}>
+                  <Stethoscope className="h-4 w-4" />
+                </span>
                 Patient Information
               </h3>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="min-w-0">
+                  <label className={labelCls}>
                     Patient Name *
                   </label>
                   <input
@@ -739,35 +774,37 @@ export default function BookNowModal({
                     onBlur={() => trackFieldBlur('patientName')}
                     className={errors.patientName ? inputErr : inputCls}
                     placeholder="Full name"
+                    autoComplete="name"
+                    enterKeyHint="next"
                   />
-                  {errors.patientName && (
-                    <p className="mt-1 text-xs text-red-600">{errors.patientName}</p>
-                  )}
+                  {errors.patientName && <p className={errCls}>{errors.patientName}</p>}
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                <div className="min-w-0">
+                  <label className={labelCls}>
                     Phone Number *
                   </label>
                   <input
                     type="tel"
+                    inputMode="tel"
                     value={form.patientPhone}
                     onChange={(e) => update('patientPhone', e.target.value)}
                     onBlur={() => trackFieldBlur('patientPhone')}
                     className={errors.patientPhone ? inputErr : inputCls}
                     placeholder="01XXXXXXXXX"
+                    autoComplete="tel"
+                    enterKeyHint="next"
                   />
-                  {errors.patientPhone && (
-                    <p className="mt-1 text-xs text-red-600">{errors.patientPhone}</p>
-                  )}
+                  {errors.patientPhone && <p className={errCls}>{errors.patientPhone}</p>}
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                <div className="min-w-0">
+                  <label className={labelCls}>
                     Email * (OTP verification)
                   </label>
                   <input
                     type="email"
+                    inputMode="email"
                     value={form.patientEmail}
                     onChange={(e) => {
                       update('patientEmail', e.target.value);
@@ -779,83 +816,87 @@ export default function BookNowModal({
                     className={errors.patientEmail ? inputErr : inputCls}
                     placeholder="you@example.com"
                     autoComplete="email"
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    enterKeyHint="next"
                   />
-                  {errors.patientEmail && (
-                    <p className="mt-1 text-xs text-red-600">{errors.patientEmail}</p>
-                  )}
+                  {errors.patientEmail && <p className={errCls}>{errors.patientEmail}</p>}
                   {bookingToken && (
-                    <p className="mt-1 text-xs text-green-600">
+                    <p className="mt-1 text-xs font-medium text-green-600">
                       ✓ Email verified
                     </p>
                   )}
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Age *
-                  </label>
-                  <input
-                    type="number"
-                    value={form.patientAge}
-                    onChange={(e) => update('patientAge', e.target.value)}
-                    className={errors.patientAge ? inputErr : inputCls}
-                    placeholder="Age"
-                    min={1}
-                  />
-                  {errors.patientAge && (
-                    <p className="mt-1 text-xs text-red-600">{errors.patientAge}</p>
-                  )}
+                <div className="grid min-w-0 grid-cols-2 gap-3 sm:contents">
+                  <div className="min-w-0">
+                    <label className={labelCls}>
+                      Age *
+                    </label>
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      value={form.patientAge}
+                      onChange={(e) => update('patientAge', e.target.value)}
+                      className={errors.patientAge ? inputErr : inputCls}
+                      placeholder="Age"
+                      min={1}
+                    />
+                    {errors.patientAge && <p className={errCls}>{errors.patientAge}</p>}
+                  </div>
+
+                  <div className="min-w-0">
+                    <label className={labelCls}>
+                      Gender
+                    </label>
+                    <select
+                      value={form.patientGender}
+                      onChange={(e) => update('patientGender', e.target.value)}
+                      className={selectCls}
+                    >
+                      {GENDER_OPTIONS.map((g) => (
+                        <option key={g.value} value={g.value}>
+                          {g.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Gender
-                  </label>
-                  <select
-                    value={form.patientGender}
-                    onChange={(e) => update('patientGender', e.target.value)}
-                    className={`${inputCls} cursor-pointer`}
-                  >
-                    {GENDER_OPTIONS.map((g) => (
-                      <option key={g.value} value={g.value}>
-                        {g.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="sm:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                <div className="min-w-0 sm:col-span-2">
+                  <label className={labelCls}>
                     Address *
                   </label>
                   <textarea
                     value={form.patientAddress}
                     onChange={(e) => update('patientAddress', e.target.value)}
-                    className={errors.patientAddress ? inputErr : inputCls}
+                    className={errors.patientAddress ? areaErr : areaCls}
                     placeholder="Full address"
+                    autoComplete="street-address"
                     rows={2}
                   />
-                  {errors.patientAddress && (
-                    <p className="mt-1 text-xs text-red-600">{errors.patientAddress}</p>
-                  )}
+                  {errors.patientAddress && <p className={errCls}>{errors.patientAddress}</p>}
                 </div>
               </div>
             </div>
-                        {/* Booking Information */}
-            <div>
-              <h3 className="mb-4 text-sm font-semibold text-gray-700 flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-green-600" />
+
+            {/* Booking Information */}
+            <div className={cardCls}>
+              <h3 className={cardTitleCls}>
+                <span className={iconBubble}>
+                  <Calendar className="h-4 w-4" />
+                </span>
                 Booking Information
               </h3>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div className="sm:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="min-w-0 sm:col-span-2">
+                  <label className={labelCls}>
                     Service Needed *
                   </label>
                   <select
                     value={form.serviceNeeded}
                     onChange={(e) => handleServiceChange(e.target.value)}
-                    className={`${inputCls} cursor-pointer`}
+                    className={`${selectCls} text-ellipsis`}
                     disabled={serviceTypesLoading}
                   >
                     <option value="">
@@ -870,53 +911,51 @@ export default function BookNowModal({
                       </option>
                     ))}
                   </select>
-                  {errors.serviceNeeded && (
-                    <p className="mt-1 text-xs text-red-600">{errors.serviceNeeded}</p>
-                  )}
+                  {errors.serviceNeeded && <p className={errCls}>{errors.serviceNeeded}</p>}
                 </div>
 
                 {/* Payment summary + dummy gateway trigger */}
                 {selectedServiceType && bookingCharge > 0 && (
-                  <div className="sm:col-span-2 rounded-xl border border-amber-200 bg-amber-50 p-4">
-                    <h4 className="mb-2 text-sm font-semibold text-amber-900">
+                  <div className="min-w-0 rounded-lg border border-amber-200 bg-amber-50 p-3 sm:col-span-2">
+                    <h4 className="mb-2 text-[13px] font-bold text-amber-900">
                       Payment Required
                     </h4>
-                    <div className="grid grid-cols-3 gap-2 text-sm">
-                      <div>
-                        <p className="text-xs text-gray-500">Total Charge</p>
-                        <p className="font-bold">{formatBDT(bookingCharge)}</p>
+                    <div className="grid grid-cols-3 divide-x divide-amber-200 text-center">
+                      <div className="min-w-0 px-1">
+                        <p className="text-[11px] leading-tight text-gray-500">Total</p>
+                        <p className="mt-0.5 break-words text-[13px] font-bold text-gray-900">{formatBDT(bookingCharge)}</p>
                       </div>
-                      <div>
-                        <p className="text-xs text-gray-500">Pay Now (min)</p>
-                        <p className="font-bold text-amber-700">{formatBDT(bookingMinPayment)}</p>
+                      <div className="min-w-0 px-1">
+                        <p className="text-[11px] leading-tight text-gray-500">Pay now</p>
+                        <p className="mt-0.5 break-words text-[13px] font-bold text-amber-700">{formatBDT(bookingMinPayment)}</p>
                       </div>
-                      <div>
-                        <p className="text-xs text-gray-500">Due After</p>
-                        <p className="font-bold text-rose-600">{formatBDT(bookingDueAfter)}</p>
+                      <div className="min-w-0 px-1">
+                        <p className="text-[11px] leading-tight text-gray-500">Due after</p>
+                        <p className="mt-0.5 break-words text-[13px] font-bold text-rose-600">{formatBDT(bookingDueAfter)}</p>
                       </div>
                     </div>
                     {paymentVerified ? (
-                      <p className="mt-2 text-xs font-semibold text-green-700">
+                      <p className="mt-2 break-words text-xs font-semibold leading-relaxed text-green-700">
                         ✓ {formatBDT(paidAmount)} paid via {paymentMethod} (Txn: {transactionId}) — verified
                       </p>
                     ) : (
                       <button
                         type="button"
                         onClick={() => setShowGateway(true)}
-                        className="mt-2 w-full rounded-lg bg-amber-600 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-700"
+                        className="mt-2.5 h-10 w-full rounded-md bg-pink-600 px-4 text-[15px] font-bold text-white transition hover:bg-pink-700 active:bg-pink-700 sm:text-sm"
                       >
-                        Pay {formatBDT(bookingMinPayment)} Now (Test Gateway)
+                        Pay with bKash ({formatBDT(bookingMinPayment)})
                       </button>
                     )}
                   </div>
                 )}
 
                 {isMedicineService && (
-                  <div className="sm:col-span-2 rounded-lg border border-blue-200 bg-blue-50 p-4">
-                    <h4 className="mb-2 text-sm font-semibold text-blue-800">Medicine Details</h4>
-                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                      <div className="md:col-span-2">
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <div className="min-w-0 rounded-lg border border-blue-200 bg-blue-50 p-3 sm:col-span-2">
+                    <h4 className="mb-2 text-[13px] font-bold text-blue-800">Medicine Details</h4>
+                    <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                      <div className="min-w-0 md:col-span-2">
+                        <label className={labelCls}>
                           Medicine Name *
                         </label>
                         <input
@@ -931,12 +970,10 @@ export default function BookNowModal({
                             <option key={m.id} value={m.name} />
                           ))}
                         </datalist>
-                        {errors.medicineName && (
-                          <p className="mt-1 text-xs text-red-600">{errors.medicineName}</p>
-                        )}
+                        {errors.medicineName && <p className={errCls}>{errors.medicineName}</p>}
                       </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <div className="min-w-0">
+                        <label className={labelCls}>
                           Strength / Dosage
                         </label>
                         <input
@@ -947,70 +984,74 @@ export default function BookNowModal({
                           className={inputCls}
                         />
                       </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Form
-                        </label>
-                        <select
-                          value={medicineForm}
-                          onChange={(e) => setMedicineForm(e.target.value)}
-                          className={`${inputCls} cursor-pointer`}
-                        >
-                          <option value="Tablet">Tablet</option>
-                          <option value="Capsule">Capsule</option>
-                          <option value="Syrup">Syrup</option>
-                          <option value="Injection">Injection</option>
-                          <option value="Cream">Cream</option>
-                          <option value="Drops">Drops</option>
-                          <option value="Other">Other</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Quantity *
-                        </label>
-                        <input
-                          type="number"
-                          value={medicineQuantity}
-                          onChange={(e) => setMedicineQuantity(Number(e.target.value) || 1)}
-                          className={errors.quantity ? inputErr : inputCls}
-                          min="1"
-                        />
-                        {errors.quantity && (
-                          <p className="mt-1 text-xs text-red-600">{errors.quantity}</p>
-                        )}
+                      <div className="grid min-w-0 grid-cols-2 gap-3 md:contents">
+                        <div className="min-w-0">
+                          <label className={labelCls}>
+                            Form
+                          </label>
+                          <select
+                            value={medicineForm}
+                            onChange={(e) => setMedicineForm(e.target.value)}
+                            className={selectCls}
+                          >
+                            <option value="Tablet">Tablet</option>
+                            <option value="Capsule">Capsule</option>
+                            <option value="Syrup">Syrup</option>
+                            <option value="Injection">Injection</option>
+                            <option value="Cream">Cream</option>
+                            <option value="Drops">Drops</option>
+                            <option value="Other">Other</option>
+                          </select>
+                        </div>
+                        <div className="min-w-0">
+                          <label className={labelCls}>
+                            Quantity *
+                          </label>
+                          <input
+                            type="number"
+                            inputMode="numeric"
+                            value={medicineQuantity}
+                            onChange={(e) => setMedicineQuantity(Number(e.target.value) || 1)}
+                            className={errors.quantity ? inputErr : inputCls}
+                            min="1"
+                          />
+                          {errors.quantity && <p className={errCls}>{errors.quantity}</p>}
+                        </div>
                       </div>
                     </div>
                   </div>
                 )}
 
                 {isPrescriptionService && (
-                  <div className="sm:col-span-2 rounded-lg border border-green-200 bg-green-50 p-4">
-                    <h4 className="mb-2 text-sm font-semibold text-green-800">Prescription Upload</h4>
-                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                      <div className="md:col-span-2">
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <div className="min-w-0 rounded-lg border border-green-200 bg-green-50 p-3 sm:col-span-2">
+                    <h4 className="mb-2 text-[13px] font-bold text-green-800">Prescription Upload</h4>
+                    <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                      <div className="min-w-0 md:col-span-2">
+                        <label className={labelCls}>
                           Upload Prescription * (JPG, PNG, PDF)
                         </label>
                         <input
                           type="file"
                           accept=".jpg,.jpeg,.png,.pdf"
                           onChange={handlePrescriptionChange}
-                          className="block w-full text-sm text-gray-500"
+                          className="block w-full min-w-0 text-[13px] text-gray-500 file:mr-3 file:h-9 file:cursor-pointer file:rounded-md file:border-0 file:bg-green-600 file:px-3 file:text-[13px] file:font-semibold file:text-white hover:file:bg-green-700"
                         />
                         {prescriptionPreview && (
                           <div className="mt-2">
-                            <p className="text-sm text-gray-600">Preview:</p>
                             {prescription?.type?.startsWith('image/') ? (
-                              <img src={prescriptionPreview} alt="Preview" className="mt-1 h-32 w-auto rounded border" />
+                              <img
+                                src={prescriptionPreview}
+                                alt="Preview"
+                                className="h-auto max-h-36 w-auto max-w-full rounded-md border border-gray-200 object-contain"
+                              />
                             ) : (
-                              <p className="text-sm text-gray-500">{prescription?.name}</p>
+                              <p className="break-all text-[13px] text-gray-500">{prescription?.name}</p>
                             )}
                           </div>
                         )}
                       </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <div className="min-w-0">
+                        <label className={labelCls}>
                           Doctor Name
                         </label>
                         <input
@@ -1020,8 +1061,8 @@ export default function BookNowModal({
                           className={inputCls}
                         />
                       </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <div className="min-w-0">
+                        <label className={labelCls}>
                           Doctor Registration Number
                         </label>
                         <input
@@ -1031,8 +1072,8 @@ export default function BookNowModal({
                           className={inputCls}
                         />
                       </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <div className="min-w-0">
+                        <label className={labelCls}>
                           Prescription Date
                         </label>
                         <input
@@ -1042,8 +1083,8 @@ export default function BookNowModal({
                           className={inputCls}
                         />
                       </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <div className="min-w-0">
+                        <label className={labelCls}>
                           Hospital / Clinic Name
                         </label>
                         <input
@@ -1057,39 +1098,41 @@ export default function BookNowModal({
                   </div>
                 )}
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Preferred Date
-                  </label>
-                  <input
-                    type="date"
-                    value={form.preferredDate}
-                    onChange={(e) => update('preferredDate', e.target.value)}
-                    className={inputCls}
-                  />
+                <div className="grid min-w-0 grid-cols-2 gap-3 sm:contents">
+                  <div className="min-w-0">
+                    <label className={labelCls}>
+                      Preferred Date
+                    </label>
+                    <input
+                      type="date"
+                      value={form.preferredDate}
+                      onChange={(e) => update('preferredDate', e.target.value)}
+                      className={inputCls}
+                    />
+                  </div>
+
+                  <div className="min-w-0">
+                    <label className={labelCls}>
+                      Preferred Time
+                    </label>
+                    <input
+                      type="time"
+                      value={form.preferredTime}
+                      onChange={(e) => update('preferredTime', e.target.value)}
+                      className={inputCls}
+                    />
+                  </div>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Preferred Time
-                  </label>
-                  <input
-                    type="time"
-                    value={form.preferredTime}
-                    onChange={(e) => update('preferredTime', e.target.value)}
-                    className={inputCls}
-                  />
-                </div>
-
-                <div className="sm:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-2">
-                    <MapPin className="h-4 w-4 text-gray-400" />
-                    Hospital / Clinic / Diagnostic Center
+                <div className="min-w-0 sm:col-span-2">
+                  <label className={`${labelCls} flex items-center gap-1.5`}>
+                    <MapPin className="h-3.5 w-3.5 shrink-0 text-gray-400" />
+                    <span className="min-w-0">Hospital / Clinic / Diagnostic Center</span>
                   </label>
                   <select
                     value={form.hospital}
                     onChange={(e) => update('hospital', e.target.value)}
-                    className={`${inputCls} cursor-pointer`}
+                    className={`${selectCls} text-ellipsis`}
                     disabled={hospitalsLoading}
                   >
                     <option value="">
@@ -1104,10 +1147,10 @@ export default function BookNowModal({
                 </div>
 
                 {isDoctorAppointment && (
-                  <div className="sm:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-2">
-                      <Stethoscope className="h-4 w-4 text-green-600" />
-                      ডাক্তার (ঐচ্ছিক) — তালিকা থেকে নির্বাচন বা নিজে লিখে দিন
+                  <div className="min-w-0 sm:col-span-2">
+                    <label className={`${labelCls} flex items-start gap-1.5 leading-snug`}>
+                      <Stethoscope className="mt-0.5 h-3.5 w-3.5 shrink-0 text-green-600" />
+                      <span className="min-w-0">ডাক্তার (ঐচ্ছিক) — তালিকা থেকে নির্বাচন বা নিজে লিখে দিন</span>
                     </label>
                     <input
                       type="text"
@@ -1133,7 +1176,7 @@ export default function BookNowModal({
                         </option>
                       ))}
                     </datalist>
-                    <p className="mt-1 text-xs text-gray-500">
+                    <p className="mt-1 break-words text-xs leading-relaxed text-gray-500">
                       {form.doctorId
                         ? 'নির্বাচিত: ' + (doctors.find((d) => d.id === form.doctorId)?.name || form.doctorName)
                         : 'তালিকা থেকে নির্বাচন করুন, অথবা মান পরিবর্তন করে লিখুন।'}
@@ -1141,54 +1184,53 @@ export default function BookNowModal({
                   </div>
                 )}
 
-                <div className="sm:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                <div className="min-w-0 sm:col-span-2">
+                  <label className={labelCls}>
                     Booking Reason / Service Details *
                   </label>
                   <textarea
                     value={form.bookingReason}
                     onChange={(e) => update('bookingReason', e.target.value)}
-                    className={errors.bookingReason ? inputErr : inputCls}
+                    className={errors.bookingReason ? areaErr : areaCls}
                     placeholder="Please describe the reason for this booking"
                     rows={3}
                   />
-                  {errors.bookingReason && (
-                    <p className="mt-1 text-xs text-red-600">{errors.bookingReason}</p>
-                  )}
+                  {errors.bookingReason && <p className={errCls}>{errors.bookingReason}</p>}
                 </div>
 
-                <div className="sm:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                <div className="min-w-0 sm:col-span-2">
+                  <label className={labelCls}>
                     Additional Note
                   </label>
                   <textarea
                     value={form.additionalNote}
                     onChange={(e) => update('additionalNote', e.target.value)}
-                    className={inputCls}
+                    className={areaCls}
                     placeholder="Anything else we should know?"
                     rows={2}
                   />
                 </div>
               </div>
             </div>
-          </div>
+          </>
           )}
           </div>
 
-          {/* Footer */}
-          <div className="flex shrink-0 gap-3 border-t border-gray-100 bg-white px-4 py-3 sm:px-6 sm:py-4">
+          {/* Footer: one compact row — small gray Cancel + main green action.
+              Respects the iPhone home-indicator area. */}
+          <div className="flex shrink-0 items-center gap-2 border-t border-gray-200 bg-white px-3 pb-[max(0.625rem,env(safe-area-inset-bottom))] pt-2.5 sm:px-4 sm:py-3">
             <button
               type="button"
               onClick={onClose}
               disabled={loading || verifying}
-              className="flex-1 rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
+              className="h-10 shrink-0 rounded-md bg-gray-200 px-5 text-[15px] font-semibold text-gray-700 transition hover:bg-gray-300 active:bg-gray-300 sm:text-sm"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading || frozen || sendingOtp || verifying || (step !== 'otp' && paymentRequired && !paymentVerified)}
-              className="flex-1 rounded-lg bg-gradient-to-r from-green-600 to-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:shadow-lg disabled:opacity-60"
+              className="h-10 min-w-0 flex-1 truncate rounded-md bg-green-600 px-4 text-[15px] font-bold text-white transition hover:bg-green-700 active:bg-green-700 disabled:opacity-50 sm:text-sm"
             >
               {frozen
                 ? 'Agent Frozen'
@@ -1197,20 +1239,20 @@ export default function BookNowModal({
                 : step === 'otp'
                 ? loading
                   ? 'Submitting...'
-                  : 'Verify OTP & Submit'
+                  : 'Verify & Complete'
                 : sendingOtp
                 ? 'Sending OTP…'
                 : loading
                 ? 'Submitting...'
                 : paymentRequired && !paymentVerified
-                ? `Pay ${formatBDT(bookingMinPayment)} to Submit`
+                ? 'Pay with bKash'
                 : 'Submit Booking Request'}
             </button>
           </div>
         </form>
       </div>
 
-      {/* Dummy gateway modal */}
+      {/* bKash gateway modal */}
       {showGateway && (
         <DummyCheckout
           amount={bookingMinPayment}
@@ -1220,7 +1262,6 @@ export default function BookNowModal({
               setTransactionId(r.txnId);
               setPaidAmount(r.amount);
               setPaymentVerified(true);
-              toast.success(`Payment of ${formatBDT(r.amount)} verified via ${r.method}`);
             }
             setShowGateway(false);
           }}
@@ -1230,4 +1271,3 @@ export default function BookNowModal({
     </div>
   );
 }
-

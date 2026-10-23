@@ -28,6 +28,22 @@ body {
   background: #f1f5f9;
   border-radius: 4px;
 }
+
+/* Marquee animation for development scroller */
+@keyframes marquee-scroll {
+  0% {
+    transform: translateX(100%);
+  }
+  100% {
+    transform: translateX(-100%);
+  }
+}
+.animate-marquee {
+  animation: marquee-scroll 12s linear infinite;
+}
+.animate-marquee:hover {
+  animation-play-state: paused;
+}
 ::-webkit-scrollbar-thumb {
   background: #94a3b8;
   border-radius: 4px;
@@ -107,5 +123,87 @@ html {
   .mobile-padding-bottom {
     padding-bottom: 0;
   }
+}
+
+/* Screenshot prevention — disable text selection and context menu globally */
+html,
+body {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Allow text selection in form inputs and textareas */
+input,
+textarea,
+input[type="email"],
+input[type="password"],
+input[type="text"],
+input[type="tel"],
+input[type="number"] {
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+  user-select: text;
+}
+
+/* Disable context menu on body (right-click / long-press screenshot) */
+html,
+body {
+  -webkit-touch-callout: none;
+  -webkit-user-drag: none;
+}
+
+/* Prevent image dragging (sometimes used to "save" screen content) */
+img {
+  -webkit-user-drag: none;
+  -khtml-user-drag: none;
+  -moz-user-drag: none;
+  -o-user-drag: none;
+  user-drag: none;
+}
+
+/* Screenshot / screen-capture detection (experimental) */
+@media (screen-capture: single-white) {
+  body {
+    filter: blur(20px);
+  }
+}
+@media (screen-capture: single-black) {
+  body {
+    filter: blur(20px);
+  }
+}
+@media (screen-capture: redacted) {
+  body {
+    filter: blur(20px);
+  }
+}
+
+/* Blur content when page is hidden (screenshot/blur detection) */
+body.page-hidden {
+  filter: blur(20px);
+  transition: filter 0.3s ease;
+}
+
+/* Watermark overlay to discourage unauthorized screenshots */
+.screenshot-watermark {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 9;
+  background: repeating-linear-gradient(
+    45deg,
+    rgba(220, 38, 38, 0.03) 0px,
+    rgba(220, 38, 38, 0.03) 20px,
+    rgba(220, 38, 38, 0.05) 20px,
+    rgba(220, 38, 38, 0.05) 40px
+  );
+  opacity: 0.15;
 }
 

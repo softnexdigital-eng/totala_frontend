@@ -55,31 +55,29 @@ import type { AgentProfile, ServiceType } from '@/types';
 
 /* =========================================================
    CONSTANTS
-   Put your images in /public/images/ (names below). Any missing
-   image falls back to a soft green placeholder, never a broken icon.
 ========================================================= */
 
-// Hero image: save it as /public/images/hero-bg.png
 const HERO_BG = '/images/hero-bg.png';
 const PREGNANT_MOTHER_IMG =
   'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTN81imzCSGPN9B6PDUDIFkyP8SsqqMBlAzrIzVzC3ung&s=10';
 const FIRST_AID_BOX_IMG =
   'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcStPEJuvpU9ugu3IKz_NQ5m6ui-zn69mSvzvlBmwTfjtQ&s=10';
 
-const BRAND = '#0b5d3b'; // dark green used for buttons / headings
+const BRAND = '#0b5d3b';
 
-// ⚠️ Replace with your REAL hotline number before going live.
-const HOTLINE = { display: '+880 1300 000000', tel: '+8801300000000' };
+const HOTLINE = { display: '01974920082', tel: '+8801974920082' };
 
-// Hides the scrollbar on horizontal swipe rows (mobile app feel).
 const NO_SCROLLBAR = '[scrollbar-width:none] [&::-webkit-scrollbar]:hidden';
 
-// Big action buttons shown right under the hero image.
+/* marquee height (px) — must match top-[30px] / pt-[134px] / scroll-mt-[150px] below */
+const MARQUEE_H = 30;
+
 const HERO_ACTIONS = [
   { key: 'doctor', label: 'ডাক্তার দেখান', sub: 'ভিডিও/ফোনে ডাক্তারের পরামর্শ', icon: Stethoscope, color: 'bg-emerald-600', service: 'ডাক্তার অ্যাপয়েন্টমেন্ট' },
   { key: 'medicine', label: 'ওষুধ চাই', sub: 'প্রেসক্রিপশন অনুযায়ী ওষুধ সংগ্রহ', icon: Pill, color: 'bg-teal-600', service: 'ওষুধ সংগ্রহ' },
   { key: 'ambulance', label: 'অ্যাম্বুলেন্স / পরিবহন', sub: 'রোগী নিয়ে যাওয়ার সহায়তা', icon: Ambulance, color: 'bg-rose-500', service: 'transport' },
 ] as const;
+
 const MAP_EMBED =
   'https://www.openstreetmap.org/export/embed.html?bbox=90.36%2C24.72%2C90.45%2C24.79&layer=mapnik&marker=24.7539%2C90.4073';
 const MAP_LINK =
@@ -94,11 +92,6 @@ const NAV_LINKS = [
   { label: 'যোগাযোগ', href: '#contact' },
 ];
 
-/**
- * Category chips shown in the navbar on mobile (swipe sideways).
- * `service` = booking service name, 'transport' = transport modal,
- * `href` = scroll to a section.
- */
 const NAV_CATEGORIES: {
   label: string;
   icon: LucideIcon;
@@ -127,7 +120,6 @@ const TONES: Record<Tone, { card: string; icon: string; arrow: string; badge: st
   violet: { card: 'border-violet-100 bg-gradient-to-br from-violet-50 to-white', icon: 'bg-violet-600', arrow: 'text-violet-700', badge: 'bg-violet-100 text-violet-700' },
 };
 
-// `pos` = image focus point. Use 'object-top' when faces are near the top.
 const SERVICES = [
   { title: 'ডাক্তার / চিকিৎসা', subtitle: 'অনলাইনে ডাক্তার পরামর্শ ও অ্যাপয়েন্টমেন্ট', icon: Stethoscope, tone: 'green' as Tone, image: '/images/subjects/doctor-consultation.jpg', badge: 'অনলাইন পরামর্শ', pos: 'object-top' },
   { title: 'হাসপাতাল / ক্লিনিক', subtitle: 'হাসপাতাল, ক্লিনিক ও রোগী সহায়তা', icon: Building2, tone: 'blue' as Tone, image: '/images/subjects/hospital.jpg', badge: 'হাসপাতাল সহায়তা', pos: 'object-center' },
@@ -139,9 +131,6 @@ const SERVICES = [
   { title: 'জরুরি পরিবহন', subtitle: 'রোগী পরিবহন ও হাসপাতালে যাওয়ার সহায়তা', icon: Car, tone: 'amber' as Tone, image: '/images/subjects/ambulance.jpg', badge: 'পরিবহন', pos: 'object-center' },
 ];
 
-/** Shape of a doctor returned by GET /api/public/doctors (serialized by the
- *  backend `serializeDoctor`, which always exposes both the dashboard and the
- *  mobile field spellings). */
 type OnlineDoctor = {
   id: string;
   name: string;
@@ -179,10 +168,6 @@ const DOCTOR_OPINIONS = [
   { name: 'ডা. আপনার নাম', specialty: 'শিশু রোগ বিশেষজ্ঞ', text: 'অভিভাবকরা শিশুর সাধারণ সমস্যায় প্রাথমিক পরামর্শ নিয়ে কখন সরাসরি চিকিৎসা প্রয়োজন তা বুঝতে পারেন।', image: '/images/doctors/doctor-6.jpg' },
 ];
 
-/**
- * Hub cards. To use your own photos, drop them in /public/images/hub/ and
- * change the `image` paths.
- */
 const HUB_SERVICES = [
   { title: 'ডাক্তার বুকিং', desc: 'এজেন্ট আপনার হয়ে অনলাইনে ডাক্তার বুক করে দেন।', icon: Stethoscope, tone: 'green' as Tone, image: '/images/subjects/hub-doctor.jpg', pos: 'object-top', book: 'ডাক্তার অ্যাপয়েন্টমেন্ট' },
   { title: 'অনলাইন পরামর্শে সহায়তা', desc: 'ফোন/ভিডিও কলে ডাক্তারের সাথে কথা বলতে পাশে থাকেন।', icon: Video, tone: 'blue' as Tone, image: '/images/subjects/emergency.jpg', pos: 'object-center', book: 'অনলাইন ডাক্তার' },
@@ -234,22 +219,26 @@ const ONLINE_STEPS = [
   { title: 'ভিডিও/ফোনে পরামর্শ নিন', desc: 'নির্ধারিত সময়ে ঘরে বসেই ডাক্তারের সাথে কথা বলুন।', icon: Video },
 ];
 
-// নমুনা তথ্য — আসল রিভিউ পেলে এগুলো বদলে দিন
 const DOCTOR_REVIEWS = [
   { name: 'রহিমা বেগম', place: 'ত্রিশাল, ময়মনসিংহ', text: 'বাড়িতে বসেই ডাক্তারের সাথে কথা বলতে পেরেছি। সময় ও যাতায়াত দুটোই বেঁচেছে।', rating: 5 },
   { name: 'আব্দুল করিম', place: 'ফুলবাড়িয়া, ময়মনসিংহ', text: 'অনলাইন পরামর্শ নেওয়ার প্রক্রিয়াটা সহজ ছিল এবং প্রয়োজনে টিম পাশে ছিল।', rating: 5 },
   { name: 'সালমা খাতুন', place: 'গফরগাঁও, ময়মনসিংহ', text: 'ডাক্তার ধৈর্য নিয়ে সমস্যা শুনেছেন এবং পরবর্তী করণীয় বুঝিয়ে দিয়েছেন।', rating: 5 },
 ];
 
+const ANNOUNCEMENTS = [
+  '🚧 সাইটটি বর্তমানে আন্ডার ডেভেলপমেন্ট',
+  '✅ চালু আছে: ডাক্তার অ্যাপয়েন্টমেন্ট, রোগী সহায়তা, ডাক্তার বুকিং, অ্যাম্বুলেন্স সার্ভিস',
+  '🎉 আগামী ১ জানুয়ারি শুভ উদ্বোধন',
+  '📍 এজেন্ট নিয়োগ চলছে — ইউনিয়ন ভিত্তিক',
+];
+
 /* =========================================================
    HELPERS
 ========================================================= */
 
-/** Strip risky characters and cap the length of anything typed into search. */
 const sanitizeQuery = (value: string) =>
   value.replace(/[<>{}[\]\\`$]/g, '').slice(0, 60);
 
-/** Hardened fetch: same-origin, must be OK + JSON, abortable. */
 async function fetchJson(url: string, signal: AbortSignal) {
   const res = await fetch(url, {
     cache: 'no-store',
@@ -266,7 +255,6 @@ async function fetchJson(url: string, signal: AbortSignal) {
 const isRecord = (v: unknown): v is Record<string, unknown> =>
   typeof v === 'object' && v !== null;
 
-/** Image with shimmer while loading and a soft fallback if it fails. */
 function SafeImage({
   src,
   alt,
@@ -285,7 +273,6 @@ function SafeImage({
   const [state, setState] = useState<'loading' | 'ok' | 'error'>('loading');
   const imgRef = useRef<HTMLImageElement>(null);
 
-  // Image may already be loaded before hydration (SSR + priority).
   useEffect(() => {
     const el = imgRef.current;
     if (el && el.complete && el.naturalWidth > 0) setState('ok');
@@ -324,11 +311,6 @@ function SafeImage({
   );
 }
 
-/**
- * OverlayCard — the whole card is the photo. A dark gradient at the bottom keeps
- * the white title + subtitle readable on any image. Compact on mobile, roomy on
- * desktop. Used by both the "সেবা সমূহ" grid and the hub grid.
- */
 function OverlayCard({
   title,
   subtitle,
@@ -367,7 +349,6 @@ function OverlayCard({
         }
       />
 
-      {/* readability gradient */}
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
 
       {badge && (
@@ -402,26 +383,22 @@ function OverlayCard({
 ========================================================= */
 export default function LandingPage() {
   const [mobileMenu, setMobileMenu] = useState(false);
+  const [mobileStepsOpen, setMobileStepsOpen] = useState(true);
   const [agents, setAgents] = useState<AgentProfile[]>([]);
   const [loadingAgents, setLoadingAgents] = useState(true);
   const [transportVehicle, setTransportVehicle] = useState<string | null>(null);
 
-  // Which section is on screen — drives the bottom tab bar highlight.
   const [activeSection, setActiveSection] = useState('top');
 
-  // Search bar: service types shown in the dropdown. Selecting one opens the
-  // booking request modal (no agent selection from the landing page).
   const [serviceTypes, setServiceTypes] = useState<ServiceType[]>([]);
   const [loadingServiceTypes, setLoadingServiceTypes] = useState(true);
   const [serviceQuery, setServiceQuery] = useState('');
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [bookingService, setBookingService] = useState<string | null>(null);
-  // Doctor picked in the "Online Doctors" section → forwarded to the modal.
   const [bookingDoctor, setBookingDoctor] = useState<{ id: string; name: string } | null>(null);
   const searchWrapRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // Public agents
   useEffect(() => {
     const controller = new AbortController();
     fetchJson('/api/public-agents', controller.signal)
@@ -441,7 +418,6 @@ export default function LandingPage() {
     return () => controller.abort();
   }, []);
 
-  // Active service types (public, no auth)
   useEffect(() => {
     const controller = new AbortController();
     fetchJson('/api/public/service-types', controller.signal)
@@ -461,12 +437,8 @@ export default function LandingPage() {
     return () => controller.abort();
   }, []);
 
-  // Online doctors shown in the "আজকের জন্য অনলাইন ডাক্তার" section.
-  // Live data from GET /api/public/doctors (active doctors only).
   const [onlineDoctors, setOnlineDoctors] = useState<OnlineDoctor[]>([]);
   const [loadingOnlineDoctors, setLoadingOnlineDoctors] = useState(true);
-  // The public API returns every active doctor (hundreds), so the section only
-  // renders the first few and lets the visitor reveal more.
   const [visibleOnlineDoctors, setVisibleOnlineDoctors] = useState(6);
   const ONLINE_DOCTORS_PAGE_SIZE = 6;
 
@@ -483,7 +455,6 @@ export default function LandingPage() {
                 typeof d.name === 'string' &&
                 d.name.trim() !== '' &&
                 d.isActive !== false &&
-                // Only approved doctors are publicly bookable.
                 String(d.registrationStatus ?? 'APPROVED').toUpperCase() ===
                   'APPROVED'
             )
@@ -497,7 +468,6 @@ export default function LandingPage() {
     return () => controller.abort();
   }, []);
 
-  // Close the dropdown when clicking / tapping outside the search bar.
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent | TouchEvent) => {
       if (
@@ -515,9 +485,8 @@ export default function LandingPage() {
     };
   }, []);
 
-  // Highlight the right bottom-tab while scrolling.
   useEffect(() => {
-    const ids = ['online-doctor', 'services']; // checked bottom → top
+    const ids = ['online-doctor', 'services'];
     let ticking = false;
     const update = () => {
       ticking = false;
@@ -539,7 +508,21 @@ export default function LandingPage() {
     };
     update();
     window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
+return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  // Screenshot prevention: blur content when page is hidden (tab switched)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      const body = document.body;
+      if (document.hidden) {
+        body.classList.add('page-hidden');
+      } else {
+        body.classList.remove('page-hidden');
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, []);
 
   const activeAgents = agents.filter((agent) => agent.isActive !== false);
@@ -554,11 +537,9 @@ export default function LandingPage() {
     setServiceQuery(name);
     setDropdownOpen(false);
     setBookingService(name);
-    // A generic service booking must not carry over a previously picked doctor.
     setBookingDoctor(null);
   };
 
-  /** Open the booking modal for a specific doctor (Online Doctors section). */
   const openDoctorBooking = (doctor: OnlineDoctor) => {
     setServiceQuery('ডাক্তার অ্যাপয়েন্টমেন্ট');
     setDropdownOpen(false);
@@ -566,22 +547,14 @@ export default function LandingPage() {
     setBookingDoctor({ id: doctor.id, name: doctor.name });
   };
 
-  /** Fee of a doctor — the API exposes it as `fee` and/or `consultationFee`. */
   const doctorFee = (doctor: OnlineDoctor): number | null => {
     const fee = Number(doctor.consultationFee ?? doctor.fee);
     return Number.isFinite(fee) && fee > 0 ? fee : null;
   };
 
-  /** Speciality label of a doctor — `specialization` or its `specialty` alias. */
   const doctorSpecialty = (doctor: OnlineDoctor): string =>
     (doctor.specialization || doctor.specialty || '').trim();
 
-  /**
-   * Profile image of a doctor. `next/image` refuses remote hosts that are not
-   * whitelisted in next.config.mjs, so only local paths and the allowed hosts
-   * are rendered — anything else falls back to the placeholder instead of
-   * throwing a "Invalid src prop" error.
-   */
   const doctorImage = (doctor: OnlineDoctor): string | null => {
     const raw = (doctor.profileImage || doctor.imageUrl || '').trim();
     if (!raw) return null;
@@ -595,7 +568,6 @@ export default function LandingPage() {
         'vromonguide.com',
         'blogger.googleusercontent.com',
         'encrypted-tbn0.gstatic.com',
-        // Doctor profile images are hosted on daktarinfo.com.
         'daktarinfo.com',
       ];
       return allowed.includes(hostname) || hostname.endsWith('.daktarinfo.com')
@@ -606,7 +578,6 @@ export default function LandingPage() {
     }
   };
 
-  // Search button: exact match opens the modal, otherwise reveal the dropdown.
   const handleSearch = () => {
     const exact = serviceTypes.find(
       (service) =>
@@ -638,7 +609,6 @@ export default function LandingPage() {
     openBooking(item.title);
   };
 
-  /** Navbar category chip tap (mobile). */
   const handleCategory = (cat: (typeof NAV_CATEGORIES)[number]) => {
     setMobileMenu(false);
     if (cat.href) {
@@ -659,19 +629,108 @@ export default function LandingPage() {
       active ? 'text-emerald-700' : 'text-slate-400'
     }`;
 
+  /* ------- Render helpers for the doctor section ------- */
+
+  const renderDoctorSkeletonMobile = (i: number) => (
+    <div
+      key={`m-skel-${i}`}
+      className="mb-3 overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-100"
+    >
+      <div className="flex gap-3.5 p-4">
+        <div className="h-16 w-16 shrink-0 animate-pulse rounded-2xl bg-slate-200/70" />
+        <div className="flex-1 space-y-2 pt-0.5">
+          <div className="h-4 w-16 animate-pulse rounded-full bg-slate-200" />
+          <div className="h-4 w-3/4 animate-pulse rounded bg-slate-200" />
+          <div className="h-3 w-1/2 animate-pulse rounded bg-slate-200" />
+        </div>
+      </div>
+      <div className="flex items-center justify-between border-t border-slate-100 bg-slate-50/80 px-4 py-3">
+        <div className="space-y-1">
+          <div className="h-3 w-14 animate-pulse rounded bg-slate-200" />
+          <div className="h-4 w-16 animate-pulse rounded bg-slate-200" />
+        </div>
+        <div className="h-11 w-[120px] animate-pulse rounded-xl bg-slate-200" />
+      </div>
+    </div>
+  );
+
+  const renderDoctorSkeletonDesktop = (i: number) => (
+    <div
+      key={`d-skel-${i}`}
+      className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm"
+    >
+      <div className="h-48 animate-pulse bg-slate-200/70" />
+      <div className="space-y-2 p-4">
+        <div className="h-4 w-2/3 animate-pulse rounded bg-slate-200" />
+        <div className="h-3 w-1/2 animate-pulse rounded bg-slate-200" />
+        <div className="h-3 w-1/3 animate-pulse rounded bg-slate-200" />
+        <div className="h-10 w-full animate-pulse rounded-lg bg-slate-200" />
+      </div>
+    </div>
+  );
+
   return (
     <main
       id="top"
-      className="min-h-screen overflow-x-clip bg-white text-slate-900 antialiased [-webkit-tap-highlight-color:transparent]"
+      className="min-h-screen overflow-x-clip bg-white text-slate-900 antialiased [-webkit-tap-highlight-color:transparent] [text-size-adjust:100%] select-none"
+      onContextMenu={(e) => e.preventDefault()}
     >
+      {/* Global marquee keyframes (no CSS file needed) */}
+      <style jsx global>{`
+        @keyframes dakdin-marquee {
+          0% {
+            transform: translateX(0);
+          }
+          100% {
+            transform: translateX(-50%);
+          }
+        }
+        .dakdin-marquee {
+          animation: dakdin-marquee 45s linear infinite;
+          will-change: transform;
+        }
+        .dakdin-marquee-wrap:hover .dakdin-marquee,
+        .dakdin-marquee-wrap:active .dakdin-marquee {
+          animation-play-state: paused;
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .dakdin-marquee {
+            animation-duration: 120s;
+          }
+        }
+      `}</style>
+
       <SecurityShield />
 
-      {/* =========================================================
-          NAVBAR  (mobile: slim app bar + swipeable category chips)
-      ========================================================= */}
-      <header className="fixed left-0 right-0 top-0 z-50 border-b border-emerald-100/80 bg-white/95 shadow-sm backdrop-blur-xl">
+      {/* Screenshot prevention watermark */}
+      <div className="screenshot-watermark" aria-hidden="true" />
+
+      {/* TOP MARQUEE (nav er upore, sobar upore) */}
+      <div
+        role="marquee"
+        aria-label="ঘোষণা"
+        style={{ height: MARQUEE_H }}
+        className="dakdin-marquee-wrap fixed inset-x-0 top-0 z-[60] flex items-center overflow-hidden bg-emerald-900 text-white"
+      >
+        <div className="dakdin-marquee flex w-max">
+          {[0, 1].map((dup) => (
+            <div key={dup} className="flex" aria-hidden={dup === 1}>
+              {ANNOUNCEMENTS.map((text) => (
+                <span
+                  key={`${dup}-${text}`}
+                  className="whitespace-nowrap px-6 text-[12px] font-semibold sm:text-[13px]"
+                >
+                  {text}
+                </span>
+              ))}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* NAVBAR */}
+      <header className="fixed left-0 right-0 top-[30px] z-50 border-b border-emerald-100/80 bg-white/95 shadow-sm backdrop-blur-xl">
         <div className="mx-auto flex h-14 max-w-7.5xl items-center justify-between gap-3 px-3.5 sm:h-16 sm:px-6 lg:h-[84px] lg:px-8">
-          {/* Logo */}
           <Link href="/" className="flex shrink-0 items-center" aria-label="DakDin হোম">
             <Image
               src="/dakdinlogo.png"
@@ -685,7 +744,6 @@ export default function LandingPage() {
             />
           </Link>
 
-          {/* Desktop Navigation */}
           <nav className="hidden items-center gap-6 lg:flex" aria-label="প্রধান মেনু">
             {NAV_LINKS.map((link, i) => (
               <a
@@ -703,7 +761,6 @@ export default function LandingPage() {
             ))}
           </nav>
 
-          {/* Right */}
           <div className="flex items-center gap-2 sm:gap-3">
             <button
               type="button"
@@ -735,7 +792,6 @@ export default function LandingPage() {
           </div>
         </div>
 
-        {/* Mobile Menu */}
         {mobileMenu && (
           <div className="max-h-[70vh] overflow-y-auto border-t border-slate-100 bg-white px-4 py-3 lg:hidden">
             <div className="mx-auto flex max-w-7.5xl flex-col gap-0.5">
@@ -762,7 +818,6 @@ export default function LandingPage() {
           </div>
         )}
 
-        {/* Category chips — mobile / tablet app navigation */}
         <nav
           aria-label="সেবার ক্যাটাগরি"
           className="border-t border-slate-100 bg-white/95 lg:hidden"
@@ -788,10 +843,8 @@ export default function LandingPage() {
         </nav>
       </header>
 
-      {/* =========================================================
-          HERO — image + search (search overlaps the image on mobile)
-      ========================================================= */}
-      <section className="relative z-20 overflow-visible pt-[104px] sm:pt-[112px] lg:pt-[84px]">
+      {/* HERO */}
+      <section className="relative z-20 overflow-visible pt-[134px] sm:pt-[142px] lg:pt-[114px]">
         <div className="relative">
           <div className="relative h-[150px] w-full bg-emerald-50 sm:h-auto sm:aspect-[3/1]">
             <SafeImage
@@ -806,8 +859,6 @@ export default function LandingPage() {
             />
           </div>
 
-          {/* Search bar — mobile: floats over the image's bottom edge.
-              sm+: sits on the green wave inside the image. */}
           <div
             ref={searchWrapRef}
             className="relative z-30 -mt-6 w-full px-3.5 sm:absolute sm:inset-x-0 sm:bottom-[7%] sm:mx-auto sm:mt-0 sm:max-w-2xl sm:px-4"
@@ -845,7 +896,6 @@ export default function LandingPage() {
               </button>
             </div>
 
-            {/* Dropdown: opens DOWN on mobile (below the bar), UP on sm+ */}
             {dropdownOpen && (
               <div className="absolute inset-x-3.5 top-full z-40 mt-2 max-h-60 overflow-y-auto rounded-2xl border border-slate-200 bg-white text-left shadow-2xl sm:inset-x-4 sm:bottom-full sm:top-auto sm:mb-2 sm:mt-0 sm:max-h-64">
                 {loadingServiceTypes ? (
@@ -884,7 +934,6 @@ export default function LandingPage() {
           </div>
         </div>
 
-        {/* Quick action tiles + hotline */}
         <div className="bg-white px-3.5 pb-4 pt-4 sm:px-6 sm:py-5 lg:px-8">
           <div className="mx-auto max-w-7.5xl">
             <p className="mb-2.5 text-center text-xs font-bold text-slate-700 sm:mb-3 sm:text-sm">
@@ -935,10 +984,8 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* =========================================================
-          SERVICE DIRECTORY — FULL-IMAGE CARDS
-      ========================================================= */}
-      <section id="services" className="scroll-mt-28 px-3.5 pb-6 pt-6 sm:px-6 sm:pb-10 sm:pt-12 lg:scroll-mt-24 lg:px-8">
+      {/* SERVICE DIRECTORY */}
+      <section id="services" className="scroll-mt-[150px] px-3.5 pb-6 pt-6 sm:px-6 sm:pb-10 sm:pt-12 lg:scroll-mt-[125px] lg:px-8">
         <div className="mx-auto max-w-7.5xl">
           <div className="flex items-end justify-between gap-4">
             <div>
@@ -981,76 +1028,155 @@ export default function LandingPage() {
       </section>
 
       {/* =========================================================
-          ONLINE DOCTOR CONSULTANCY — PRIMARY BUSINESS
+          ONLINE DOCTOR CONSULTANCY (mobile-first, responsive)
       ========================================================= */}
-      <section id="online-doctor" className="scroll-mt-28 bg-slate-50/70 px-3.5 py-8 sm:px-6 sm:py-14 lg:scroll-mt-24 lg:px-8">
-        <div className="mx-auto max-w-7.5xl">
-          <div className="grid gap-6 sm:gap-8 lg:grid-cols-[1.05fr_1.95fr] lg:items-center">
-            <div>
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-2.5 py-1 text-[11px] font-bold text-emerald-800 sm:gap-2 sm:px-3 sm:py-1.5 sm:text-xs">
-                <Video className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> মূল সেবা
+      <section
+        id="online-doctor"
+        className="scroll-mt-[150px] bg-slate-50/70 py-6 sm:py-12 lg:scroll-mt-[125px]"
+      >
+        <div className="mx-auto max-w-7.5xl px-4 sm:px-6 lg:px-8">
+          <div className="grid gap-8 sm:gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.9fr)] lg:items-start lg:gap-10">
+            {/* ----- LEFT COLUMN (intro + steps) ----- */}
+            <div className="lg:sticky lg:top-[130px]">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1.5 text-xs font-bold text-emerald-800">
+                <Video className="h-3.5 w-3.5" /> মূল সেবা
               </span>
-              <h2 className="mt-3 text-[22px] font-black leading-tight text-slate-900 sm:mt-4 sm:text-3xl lg:text-4xl">ঘরে বসেই অনলাইনে<br /><span className="text-emerald-700">ডাক্তারের পরামর্শ নিন</span></h2>
-              <p className="mt-2.5 max-w-xl text-xs leading-6 text-slate-600 sm:mt-4 sm:text-sm sm:leading-7">আপনার সমস্যা জানান, উপযুক্ত বিভাগ নির্বাচন করুন এবং নির্ধারিত সময়ে ভিডিও বা ফোনে চিকিৎসকের সাথে কথা বলুন। প্রয়োজন হলে Dakdin-এর সহায়তাও নিতে পারবেন।</p>
-              <div className="mt-4 flex flex-wrap gap-2.5 sm:mt-6 sm:gap-3">
-                <button type="button" onClick={() => openBooking('ডাক্তার অ্যাপয়েন্টমেন্ট')} style={{ backgroundColor: BRAND }} className="inline-flex items-center gap-1.5 rounded-full px-4 py-2.5 text-xs font-bold text-white shadow-lg transition active:scale-95 hover:brightness-110 sm:gap-2 sm:px-6 sm:py-3 sm:text-sm">
-                  <CalendarDays className="h-4 w-4" /> ডাক্তার দেখান
+
+              <h2 className="mt-3 text-[24px] font-black leading-[1.25] text-slate-900 sm:text-3xl lg:text-4xl">
+                ঘরে বসেই অনলাইনে
+                <br />
+                <span className="text-emerald-700">ডাক্তারের পরামর্শ নিন</span>
+              </h2>
+
+              <p className="mt-3 max-w-xl text-[14px] leading-6 text-slate-600 sm:text-sm sm:leading-7">
+                আপনার সমস্যা জানান, উপযুক্ত বিভাগ নির্বাচন করুন এবং নির্ধারিত সময়ে
+                ভিডিও বা ফোনে চিকিৎসকের সাথে কথা বলুন। প্রয়োজনে Dakdin-এর সহায়তাও নিতে পারবেন।
+              </p>
+
+              {/* CTAs: full-width on mobile, larger touch targets */}
+              <div className="mt-5 flex flex-col gap-3 sm:mt-5 sm:flex-row sm:flex-wrap sm:gap-3">
+                <button
+                  type="button"
+                  onClick={() => openBooking('ডাক্তার অ্যাপয়েন্টমেন্ট')}
+                  style={{ backgroundColor: BRAND }}
+                  className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl px-5 py-3.5 text-[15px] font-bold text-white shadow-lg transition active:scale-[0.98] hover:brightness-110 sm:min-h-0 sm:w-auto sm:rounded-full sm:px-6 sm:py-3 sm:text-sm"
+                >
+                  <CalendarDays className="h-5 w-5" /> ডাক্তার দেখান
                 </button>
-                <Link href="/doctors" className="inline-flex items-center gap-1.5 rounded-full border border-emerald-600 bg-white px-4 py-2.5 text-xs font-bold text-emerald-700 transition active:scale-95 hover:bg-emerald-50 sm:gap-2 sm:px-6 sm:py-3 sm:text-sm">
-                  সব ডাক্তার দেখুন <ArrowRight className="h-4 w-4" />
+                <Link
+                  href="/doctors"
+                  className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl border-2 border-emerald-600 bg-white px-5 py-3.5 text-[15px] font-bold text-emerald-700 transition active:scale-[0.98] hover:bg-emerald-50 sm:min-h-0 sm:w-auto sm:rounded-full sm:px-6 sm:py-3 sm:text-sm"
+                >
+                  সব ডাক্তার দেখুন <ArrowRight className="h-5 w-5" />
                 </Link>
               </div>
-              <div className="mt-5 grid grid-cols-4 gap-2 sm:mt-7 sm:gap-3">
-                {ONLINE_STEPS.map(({ title, icon: Icon }, i) => (
-                  <div key={title} className="rounded-xl border border-emerald-100 bg-white p-2 shadow-sm sm:rounded-2xl sm:p-3">
-                    <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700 sm:h-9 sm:w-9 sm:rounded-xl"><Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" /></span>
-                    <p className="mt-1.5 text-[10px] font-bold leading-[14px] text-slate-800 sm:mt-2 sm:text-[11px] sm:leading-4"><span className="text-emerald-600">{i + 1}. </span>{title}</p>
+
+              {/* Steps — mobile: vertical list (clearer), sm+: grid */}
+              <div className="mt-6 sm:mt-8">
+                <p className="mb-3 text-xs font-bold uppercase tracking-wide text-slate-500">
+                  কীভাবে কাজ করে
+                </p>
+
+                {/* mobile: collapsible vertical steps */}
+                <div className="sm:hidden">
+                  <div
+                    className="flex cursor-pointer items-center justify-between rounded-xl border border-emerald-100 bg-white px-4 py-3 shadow-sm"
+                    onClick={() => setMobileStepsOpen(!mobileStepsOpen)}
+                    role="button"
+                    aria-expanded={mobileStepsOpen}
+                  >
+                    <span className="text-sm font-bold text-slate-800">কীভাবে কাজ করে (4 স্টেপ)</span>
+                    <ChevronRight
+                      className={`h-5 w-5 text-emerald-600 transition-transform duration-300 ${
+                        mobileStepsOpen ? 'rotate-90' : ''
+                      }`}
+                    />
                   </div>
-                ))}
+                  <div
+                    className={`overflow-hidden transition-all duration-300 ${
+                      mobileStepsOpen ? 'max-h-[600px] opacity-100' : 'max-h-0 opacity-0'
+                    }`}
+                  >
+                    <div className="space-y-2.5 pt-2.5">
+                      {ONLINE_STEPS.map(({ title, desc, icon: Icon }, i) => (
+                        <div
+                          key={title}
+                          className="flex items-start gap-3 rounded-2xl border border-emerald-100 bg-white p-3.5 shadow-sm"
+                        >
+                          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
+                            <Icon className="h-5 w-5" />
+                          </span>
+                          <div className="min-w-0 flex-1 pt-0.5">
+                            <p className="text-[14px] font-bold leading-5 text-slate-800">
+                              <span className="text-emerald-600">{i + 1}. </span>
+                              {title}
+                            </p>
+                            {desc && (
+                              <p className="mt-0.5 text-[13px] leading-4 text-slate-500">{desc}</p>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* sm+: 2/4-col grid */}
+                <div className="hidden grid-cols-2 gap-3 sm:grid lg:grid-cols-4">
+                  {ONLINE_STEPS.map(({ title, icon: Icon }, i) => (
+                    <div
+                      key={title}
+                      className="rounded-2xl border border-emerald-100 bg-white p-3.5 shadow-sm"
+                    >
+                      <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
+                        <Icon className="h-5 w-5" />
+                      </span>
+                      <p className="mt-2.5 text-[12px] font-bold leading-4 text-slate-800">
+                        <span className="text-emerald-600">{i + 1}. </span>
+                        {title}
+                      </p>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
 
-            <div>
-              <div className="mb-3 flex items-center justify-between sm:mb-4">
+            {/* ----- RIGHT COLUMN (doctors) ----- */}
+            <div className="min-w-0">
+              <div className="mb-4 flex items-end justify-between gap-3">
                 <div>
-                  <h3 className="text-base font-black text-slate-900 sm:text-xl">আজকের জন্য অনলাইন ডাক্তার</h3>
-                  <p className="mt-0.5 text-[11px] text-slate-500 sm:mt-1 sm:text-xs">অনুমোদিত ডাক্তারদের তালিকা — বুকিং দিতে ডাক্তার বেছে নিন।</p>
+                  <h3 className="text-[18px] font-black text-slate-900 sm:text-xl">
+                   ডাক্তার তালিকা
+                  </h3>
+                  <p className="mt-1 text-[13px] text-slate-500 sm:text-xs">
+                    অনুমোদিত ডাক্তারদের তালিকা — বুকিং দিতে ডাক্তার বেছে নিন।
+                  </p>
                 </div>
-                <span className="hidden rounded-full bg-emerald-100 px-3 py-1.5 text-xs font-bold text-emerald-700 sm:inline-flex">● Online consultation</span>
+                <span className="hidden shrink-0 rounded-full bg-emerald-100 px-3 py-1.5 text-xs font-bold text-emerald-700 sm:inline-flex">
+                  ● Online consultation
+                </span>
               </div>
 
-              {/* Mobile: swipe row · md+: 3-column grid */}
-              <div
-                className={`-mx-3.5 flex snap-x snap-mandatory gap-3 overflow-x-auto px-3.5 pb-2 sm:-mx-6 sm:px-6 md:mx-0 md:grid md:grid-cols-3 md:gap-4 md:overflow-visible md:px-0 md:pb-0 ${NO_SCROLLBAR}`}
-              >
-                {loadingOnlineDoctors &&
-                  [0, 1, 2].map((i) => (
-                    <div key={`doctor-skeleton-${i}`} className="w-[160px] shrink-0 snap-start overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm md:w-auto">
-                      <div className="h-28 animate-pulse bg-slate-200/70 md:h-44" />
-                      <div className="space-y-2 p-3 md:p-4">
-                        <div className="h-4 w-2/3 animate-pulse rounded bg-slate-200" />
-                        <div className="h-3 w-1/2 animate-pulse rounded bg-slate-200" />
-                        <div className="h-3 w-1/3 animate-pulse rounded bg-slate-200" />
-                      </div>
-                    </div>
-                  ))}
+              {/* ===== MOBILE: improved list cards ===== */}
+              <div className="sm:hidden">
+                {loadingOnlineDoctors && [0, 1, 2].map((i) => renderDoctorSkeletonMobile(i))}
 
                 {!loadingOnlineDoctors && onlineDoctors.length === 0 && (
-                  <div className="w-full shrink-0 rounded-2xl border border-dashed border-emerald-200 bg-white p-6 text-center md:col-span-3 md:p-8">
-                    <Stethoscope className="mx-auto h-8 w-8 text-emerald-500 sm:h-10 sm:w-10" />
-                    <p className="mt-2.5 text-[13px] font-bold text-slate-800 sm:mt-3 sm:text-sm">
+                  <div className="rounded-2xl border border-dashed border-emerald-200 bg-white p-6 text-center">
+                    <Stethoscope className="mx-auto h-11 w-11 text-emerald-500" />
+                    <p className="mt-3 text-[15px] font-bold text-slate-800">
                       এখনো কোনো অনলাইন ডাক্তার যোগ করা হয়নি
                     </p>
-                    <p className="mt-1 text-[11px] text-slate-500 sm:text-xs">
+                    <p className="mt-1.5 text-[13px] leading-5 text-slate-500">
                       আপনার বুকিং রিকোয়েস্ট দিলে আমাদের টিম সঠিক ডাক্তারের সাথে যোগাযোগ করাবে।
                     </p>
                     <button
                       type="button"
                       onClick={() => openBooking('ডাক্তার অ্যাপয়েন্টমেন্ট')}
                       style={{ backgroundColor: BRAND }}
-                      className="mt-3.5 inline-flex items-center gap-2 rounded-full px-4 py-2.5 text-xs font-bold text-white transition active:scale-95 hover:brightness-110 sm:mt-4 sm:px-5"
+                      className="mt-5 inline-flex min-h-[48px] items-center gap-2 rounded-xl px-6 text-[15px] font-bold text-white transition active:scale-95 hover:brightness-110"
                     >
-                      <CalendarDays className="h-4 w-4" /> বুকিং রিকোয়েস্ট দিন
+                      <CalendarDays className="h-5 w-5" /> বুকিং রিকোয়েস্ট দিন
                     </button>
                   </div>
                 )}
@@ -1059,61 +1185,193 @@ export default function LandingPage() {
                   const image = doctorImage(doctor);
                   const fee = doctorFee(doctor);
                   const specialty = doctorSpecialty(doctor);
+                  const avatarFallback = (
+                    <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-emerald-100 to-sky-50 text-emerald-700">
+                      <Stethoscope className="h-8 w-8" />
+                    </div>
+                  );
                   return (
-                    <div key={doctor.id} className="group w-[160px] shrink-0 snap-start overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm transition md:w-auto md:hover:-translate-y-1 md:hover:shadow-xl">
-                      <div className="relative h-28 bg-emerald-50 md:h-44">
-                        {image ? (
-                          <SafeImage src={image} alt={doctor.name} sizes="(max-width: 768px) 160px, 33vw" className="object-cover object-top transition duration-500 group-hover:scale-105"
-                            fallback={<div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-emerald-100 to-sky-50 text-emerald-700"><Stethoscope className="h-10 w-10 md:h-16 md:w-16" /></div>} />
-                        ) : (
-                          <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-emerald-100 to-sky-50 text-emerald-700">
-                            <Stethoscope className="h-10 w-10 md:h-16 md:w-16" />
-                          </div>
-                        )}
-                        <span className="absolute left-2 top-2 rounded-full bg-white/95 px-2 py-0.5 text-[9px] font-bold text-emerald-700 shadow-sm md:left-3 md:top-3 md:px-2.5 md:py-1 md:text-[10px]">● Available</span>
-                      </div>
-                      <div className="p-3 md:p-4">
-                        <h4 className="line-clamp-1 text-[13px] font-black text-slate-900 md:text-[15px]">{doctor.name}</h4>
-                        {specialty && <p className="mt-0.5 line-clamp-1 text-[11px] font-semibold text-emerald-700 md:text-xs">{specialty}</p>}
-                        {(doctor.title || doctor.hospital) && (
-                          <p className="mt-0.5 line-clamp-1 text-[10px] text-slate-500 md:mt-1 md:text-[11px]">
-                            {[doctor.title, doctor.hospital].filter(Boolean).join(' • ')}
-                          </p>
-                        )}
-                        <div className="mt-2.5 flex items-center justify-between gap-1 border-t border-slate-100 pt-2.5 md:mt-3 md:pt-3">
-                          <span className="text-xs font-black text-slate-900 md:text-sm">
-                            {fee !== null ? `৳ ${fee}` : 'ফি জানতে কল করুন'}
-                          </span>
-                          <button type="button" onClick={() => openDoctorBooking(doctor)} className="shrink-0 rounded-full bg-emerald-700 px-2.5 py-1.5 text-[10px] font-bold text-white transition active:scale-95 hover:bg-emerald-800 md:px-3.5 md:py-2 md:text-[11px]">পরামর্শ নিন</button>
+                    <div
+                      key={doctor.id}
+                      className="mb-3 overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-100"
+                    >
+                      <div className="flex gap-3.5 p-4">
+                        <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-2xl bg-emerald-50">
+                          {image ? (
+                            <SafeImage
+                              src={image}
+                              alt={doctor.name}
+                              sizes="64px"
+                              className="object-cover object-top"
+                              fallback={avatarFallback}
+                            />
+                          ) : (
+                            avatarFallback
+                          )}
                         </div>
+
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-700">
+                              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                              Available
+                            </span>
+                          </div>
+                          <h4 className="mt-1.5 line-clamp-2 text-[15px] font-bold leading-snug text-slate-900">
+                            {doctor.name}
+                          </h4>
+                          {specialty && (
+                            <p className="mt-0.5 line-clamp-1 text-[13px] font-semibold text-emerald-700">
+                              {specialty}
+                            </p>
+                          )}
+                          {(doctor.title || doctor.hospital) && (
+                            <p className="mt-0.5 line-clamp-1 text-[12px] text-slate-500">
+                              {[doctor.title, doctor.hospital].filter(Boolean).join(' • ')}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between gap-3 border-t border-slate-100 bg-slate-50/80 px-4 py-3">
+                        <div>
+                          <p className="text-[11px] font-medium text-slate-500">পরামর্শ ফি</p>
+                          <p className="text-[15px] font-black text-slate-900">
+                            {fee !== null ? `৳ ${fee}` : 'ফি জানতে কল করুন'}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => openDoctorBooking(doctor)}
+                          className="flex min-h-[44px] min-w-[120px] items-center justify-center rounded-xl bg-emerald-700 px-4 text-[14px] font-bold text-white transition active:scale-95 active:bg-emerald-800"
+                        >
+                          পরামর্শ নিন
+                        </button>
                       </div>
                     </div>
                   );
                 })}
-              </div>
 
-              {!loadingOnlineDoctors && onlineDoctors.length > visibleOnlineDoctors && (
-                <div className="mt-4 flex justify-center sm:mt-6">
+                {!loadingOnlineDoctors && onlineDoctors.length > visibleOnlineDoctors && (
                   <button
                     type="button"
-                    onClick={() =>
-                      setVisibleOnlineDoctors((v) => v + ONLINE_DOCTORS_PAGE_SIZE)
-                    }
-                    className="inline-flex items-center gap-2 rounded-full border border-emerald-600 px-4 py-2 text-xs font-bold text-emerald-700 transition active:scale-95 hover:bg-emerald-600 hover:text-white sm:px-5 sm:py-2.5"
+                    onClick={() => setVisibleOnlineDoctors((v) => v + ONLINE_DOCTORS_PAGE_SIZE)}
+                    className="mt-2 flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl border-2 border-emerald-600 bg-white px-5 text-[14px] font-bold text-emerald-700 transition active:scale-[0.98] hover:bg-emerald-600 hover:text-white"
                   >
-                    আরও ডাক্তার দেখুন
-                    <ChevronRight className="h-4 w-4" />
+                    আরও ডাক্তার দেখুন <ChevronRight className="h-4 w-4" />
                   </button>
+                )}
+              </div>
+
+              {/* ===== DESKTOP / TABLET: grid ===== */}
+              <div className="hidden sm:block">
+                <div className="grid grid-cols-2 gap-4 xl:grid-cols-3">
+                  {loadingOnlineDoctors &&
+                    [0, 1, 2, 3].map((i) => renderDoctorSkeletonDesktop(i))}
+
+                  {!loadingOnlineDoctors && onlineDoctors.length === 0 && (
+                    <div className="col-span-full rounded-2xl border border-dashed border-emerald-200 bg-white p-8 text-center">
+                      <Stethoscope className="mx-auto h-10 w-10 text-emerald-500" />
+                      <p className="mt-3 text-sm font-bold text-slate-800">
+                        এখনো কোনো অনলাইন ডাক্তার যোগ করা হয়নি
+                      </p>
+                      <p className="mt-1 text-xs text-slate-500">
+                        আপনার বুকিং রিকোয়েস্ট দিলে আমাদের টিম সঠিক ডাক্তারের সাথে যোগাযোগ করাবে।
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => openBooking('ডাক্তার অ্যাপয়েন্টমেন্ট')}
+                        style={{ backgroundColor: BRAND }}
+                        className="mt-4 inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-xs font-bold text-white transition active:scale-95 hover:brightness-110"
+                      >
+                        <CalendarDays className="h-4 w-4" /> বুকিং রিকোয়েস্ট দিন
+                      </button>
+                    </div>
+                  )}
+
+                  {onlineDoctors.slice(0, visibleOnlineDoctors).map((doctor) => {
+                    const image = doctorImage(doctor);
+                    const fee = doctorFee(doctor);
+                    const specialty = doctorSpecialty(doctor);
+                    return (
+                      <div
+                        key={doctor.id}
+                        className="group flex flex-col overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-xl"
+                      >
+                        <div className="relative h-48 bg-emerald-50">
+                          {image ? (
+                            <SafeImage
+                              src={image}
+                              alt={doctor.name}
+                              sizes="(max-width: 768px) 50vw, (max-width: 1280px) 33vw, 25vw"
+                              className="object-cover object-top transition duration-500 group-hover:scale-105"
+                              fallback={
+                                <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-emerald-100 to-sky-50 text-emerald-700">
+                                  <Stethoscope className="h-16 w-16" />
+                                </div>
+                              }
+                            />
+                          ) : (
+                            <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-emerald-100 to-sky-50 text-emerald-700">
+                              <Stethoscope className="h-16 w-16" />
+                            </div>
+                          )}
+                          <span className="absolute left-3 top-3 rounded-full bg-white/95 px-2.5 py-1 text-[10px] font-bold text-emerald-700 shadow-sm">
+                            ● Available
+                          </span>
+                        </div>
+
+                        <div className="flex flex-1 flex-col p-4">
+                          <h4 className="line-clamp-1 text-[15px] font-black text-slate-900">
+                            {doctor.name}
+                          </h4>
+                          {specialty && (
+                            <p className="mt-0.5 line-clamp-1 text-xs font-semibold text-emerald-700">
+                              {specialty}
+                            </p>
+                          )}
+                          {(doctor.title || doctor.hospital) && (
+                            <p className="mt-1 line-clamp-2 text-[11px] leading-4 text-slate-500">
+                              {[doctor.title, doctor.hospital].filter(Boolean).join(' • ')}
+                            </p>
+                          )}
+
+                          <div className="mt-auto flex items-center justify-between gap-2 border-t border-slate-100 pt-3">
+                            <span className="text-sm font-black text-slate-900">
+                              {fee !== null ? `৳ ${fee}` : 'ফি জানতে কল করুন'}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => openDoctorBooking(doctor)}
+                              className="shrink-0 rounded-full bg-emerald-700 px-3.5 py-2 text-[11px] font-bold text-white transition active:scale-95 hover:bg-emerald-800"
+                            >
+                              পরামর্শ নিন
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
-              )}
+
+                {!loadingOnlineDoctors && onlineDoctors.length > visibleOnlineDoctors && (
+                  <div className="mt-6 flex justify-center">
+                    <button
+                      type="button"
+                      onClick={() => setVisibleOnlineDoctors((v) => v + ONLINE_DOCTORS_PAGE_SIZE)}
+                      className="inline-flex items-center gap-2 rounded-full border border-emerald-600 px-5 py-2.5 text-xs font-bold text-emerald-700 transition active:scale-95 hover:bg-emerald-600 hover:text-white"
+                    >
+                      আরও ডাক্তার দেখুন <ChevronRight className="h-4 w-4" />
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* =========================================================
-          PATIENT REVIEWS
-      ========================================================= */}
+      {/* PATIENT REVIEWS */}
       <section className="bg-emerald-50/50 px-3.5 py-8 sm:px-6 sm:py-12 lg:px-8">
         <div className="mx-auto max-w-7.5xl">
           <h2 className="flex items-center gap-2 text-base font-black text-slate-900 sm:text-xl">
@@ -1154,9 +1412,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* =========================================================
-          HEALTH SUBJECTS — IMAGE FIRST
-      ========================================================= */}
+      {/* HEALTH SUBJECTS */}
       <section className="px-3.5 py-8 sm:px-6 sm:py-12 lg:px-8">
         <div className="mx-auto max-w-7.5xl">
           <div className="flex items-end justify-between gap-4">
@@ -1184,9 +1440,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* =========================================================
-          DOCTOR + DISTINGUISHED OPINIONS
-      ========================================================= */}
+      {/* DOCTOR + DISTINGUISHED OPINIONS */}
       <section className="bg-slate-50/70 px-3.5 py-8 sm:px-6 sm:py-12 lg:px-8">
         <div className="mx-auto max-w-7.5xl">
           <div className="grid gap-7 sm:gap-8 lg:grid-cols-2">
@@ -1235,9 +1489,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* =========================================================
-          HUB + AGENT SERVICE — FULL-IMAGE CARDS
-      ========================================================= */}
+      {/* HUB + AGENT SERVICE */}
       <section className="px-3.5 py-8 sm:px-6 sm:py-12 lg:px-8">
         <div className="mx-auto max-w-7.5xl">
           <div className="text-center">
@@ -1268,9 +1520,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* =========================================================
-          OUR AGENTS (compact cards + registration CTAs)
-      ========================================================= */}
+      {/* OUR AGENTS */}
       <section className="bg-slate-50 px-3.5 py-8 sm:px-6 sm:py-12 lg:px-8">
         <div className="mx-auto max-w-7.5xl">
           <div className="flex items-end justify-between gap-3">
@@ -1291,7 +1541,6 @@ export default function LandingPage() {
             </Link>
           </div>
 
-          {/* Compact cards: 3 cols on mobile, 6 cols on large */}
           <div className="mt-4 grid grid-cols-3 gap-2 sm:mt-5 sm:gap-3 lg:grid-cols-6">
             {loadingAgents ? (
               [0, 1, 2, 3, 4, 5].map((i) => <AgentCardSkeleton key={i} />)
@@ -1301,7 +1550,6 @@ export default function LandingPage() {
               </div>
             ) : (
               activeAgents.slice(0, 6).map((agent) => {
-                // Adjust these field names to match your real AgentProfile type.
                 const a = agent as unknown as Record<string, unknown>;
                 const name = String(a.name ?? a.fullName ?? 'এজেন্ট');
                 const area = String(a.area ?? a.location ?? a.upazila ?? '');
@@ -1330,7 +1578,6 @@ export default function LandingPage() {
             )}
           </div>
 
-          {/* Registration CTAs */}
           <div className="mt-5 grid gap-3 sm:mt-8 sm:gap-4 md:grid-cols-2">
             <div className="flex items-center gap-3 rounded-2xl border border-emerald-200 bg-white p-3.5 shadow-sm sm:gap-4 sm:p-5">
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white sm:h-12 sm:w-12">
@@ -1372,12 +1619,9 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* =========================================================
-          HEALTH TIPS
-      ========================================================= */}
-      <section id="tips" className="scroll-mt-28 px-3.5 py-6 sm:px-6 lg:scroll-mt-24 lg:px-8">
+      {/* HEALTH TIPS */}
+      <section id="tips" className="scroll-mt-[150px] px-3.5 py-6 sm:px-6 lg:scroll-mt-[125px] lg:px-8">
         <div className="mx-auto grid max-w-7.5xl gap-4 sm:gap-5 lg:grid-cols-[.85fr_1.4fr]">
-          {/* Pregnancy tips */}
           <div className="relative overflow-hidden rounded-3xl border border-emerald-100 bg-gradient-to-br from-emerald-50 to-white p-4 sm:p-5">
             <h2 className="flex items-center gap-2 text-[15px] font-black text-emerald-800 sm:text-lg">
               <Heart className="h-4 w-4 fill-emerald-600 text-emerald-600 sm:h-5 sm:w-5" />
@@ -1414,7 +1658,6 @@ export default function LandingPage() {
             </Link>
           </div>
 
-          {/* First aid tips + box */}
           <div className="grid gap-4 rounded-3xl border border-sky-100 bg-gradient-to-br from-sky-50/70 to-white p-4 sm:gap-5 sm:p-5 md:grid-cols-[1fr_1fr]">
             <div>
               <h2 className="flex items-center gap-2 text-[15px] font-black text-sky-800 sm:text-lg">
@@ -1488,9 +1731,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* =========================================================
-          NEWS & HEALTH UPDATES
-      ========================================================= */}
+      {/* NEWS */}
       <section className="px-3.5 py-6 sm:px-6 sm:py-8 lg:px-8">
         <div className="mx-auto max-w-7.5xl">
           <div className="flex items-center justify-between">
@@ -1544,12 +1785,9 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* =========================================================
-          EMERGENCY + LOCATION (just above footer)
-      ========================================================= */}
-      <section id="emergency" className="scroll-mt-28 px-3.5 py-6 sm:px-6 sm:py-10 lg:scroll-mt-24 lg:px-8">
+      {/* EMERGENCY + LOCATION */}
+      <section id="emergency" className="scroll-mt-[150px] px-3.5 py-6 sm:px-6 sm:py-10 lg:scroll-mt-[125px] lg:px-8">
         <div className="mx-auto grid max-w-7.5xl gap-4 sm:gap-5 lg:grid-cols-[1fr_1.05fr]">
-          {/* Emergency contacts */}
           <div className="rounded-3xl border border-rose-100 bg-rose-50/70 p-4 sm:p-5">
             <h2 className="flex items-center gap-2 text-[15px] font-black text-rose-600 sm:text-lg">
               <Siren className="h-4 w-4 sm:h-5 sm:w-5" />
@@ -1588,7 +1826,6 @@ export default function LandingPage() {
             </div>
           </div>
 
-          {/* Location */}
           <div
             id="about"
             className="rounded-3xl border border-emerald-100 bg-emerald-50/60 p-4 sm:p-5"
@@ -1651,16 +1888,13 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* =========================================================
-          FOOTER  (extra bottom padding on mobile for the tab bar)
-      ========================================================= */}
+      {/* FOOTER */}
       <footer
         id="contact"
         className="px-4 pb-[110px] pt-9 text-emerald-50/80 sm:px-6 sm:pt-12 lg:px-8 lg:pb-6"
         style={{ backgroundColor: '#0a4030' }}
       >
         <div className="mx-auto grid max-w-7.5xl grid-cols-2 gap-x-6 gap-y-7 sm:gap-10 md:grid-cols-[1.3fr_1.2fr_.7fr_.8fr_1.1fr]">
-          {/* Brand */}
           <div className="col-span-2 md:col-span-1">
             <Link
               href="/"
@@ -1687,7 +1921,6 @@ export default function LandingPage() {
             </p>
           </div>
 
-          {/* Quick links */}
           <div>
             <h4 className="text-sm font-bold text-white sm:text-base">দ্রুত লিংক</h4>
             <div className="mt-3 space-y-2 text-[13px] sm:mt-4 sm:space-y-2.5 sm:text-sm">
@@ -1699,7 +1932,6 @@ export default function LandingPage() {
             </div>
           </div>
 
-          {/* About */}
           <div>
             <h4 className="text-sm font-bold text-white sm:text-base">আমাদের সম্পর্কে</h4>
             <div className="mt-3 space-y-2 text-[13px] sm:mt-4 sm:space-y-2.5 sm:text-sm">
@@ -1710,7 +1942,6 @@ export default function LandingPage() {
             </div>
           </div>
 
-          {/* Contact */}
           <div className="col-span-2 md:col-span-1">
             <h4 className="text-sm font-bold text-white sm:text-base">যোগাযোগ</h4>
             <div className="mt-3 space-y-2.5 text-[13px] sm:mt-4 sm:space-y-3 sm:text-sm">
@@ -1756,10 +1987,7 @@ export default function LandingPage() {
         </div>
       </footer>
 
-      {/* =========================================================
-          BOTTOM TAB BAR — mobile app navigation (replaces the old
-          sticky call button; the raised centre button is the call CTA)
-      ========================================================= */}
+      {/* BOTTOM TAB BAR */}
       <nav
         aria-label="নিচের মেনু"
         className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200/80 bg-white/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-4px_20px_rgba(0,0,0,0.06)] backdrop-blur-xl lg:hidden"
@@ -1774,7 +2002,6 @@ export default function LandingPage() {
             সেবা
           </a>
 
-          {/* Raised call button */}
           <a
             href={`tel:${HOTLINE.tel}`}
             aria-label="হটলাইনে ফোন করুন"
@@ -1800,8 +2027,6 @@ export default function LandingPage() {
         </div>
       </nav>
 
-      {/* Booking request modal — opened from the search bar / service cards.
-          No agent is selected here; the Super Admin assigns one after review. */}
       {bookingService && (
         <BookNowModal
           initialService={bookingService}
@@ -1813,7 +2038,6 @@ export default function LandingPage() {
         />
       )}
 
-      {/* Transport booking modal */}
       {transportVehicle && (
         <TransportBookingModal
           vehicleType={transportVehicle}
