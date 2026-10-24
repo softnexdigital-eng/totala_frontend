@@ -10,7 +10,6 @@ import { trackLead, getFingerprint } from '@/lib/antiFraud';
 import { useBookingOtp } from '@/components/booking/useBookingOtp';
 import { GENDER_OPTIONS, type ServiceType } from '@/lib/bookingOptions';
 import { formatBDT } from '@/lib/payments';
-import DummyCheckout from '@/components/booking/DummyCheckout';
 import type { AgentProfile } from '@/types';
 import type { Medicine } from '@/types';
 
@@ -173,14 +172,13 @@ export default function BookNowModal({
   // server-side (backend also rejects submits <3s after formOpenedAt).
   const [honeypot, setHoneypot] = useState('');
 
-  /* ---------------- Mandatory initial-payment (bKash) --------------- */
-  // Selected service pricing snapshot → required initial payment. Submit stays
-  // disabled until the bKash gateway confirms a successful payment.
-  const [paymentMethod, setPaymentMethod] = useState('');
-  const [transactionId, setTransactionId] = useState('');
+  /* ---------------- Test-mode payment (no gateway verification) --------------- */
+  // In test mode, a single "Pay" button click marks the booking as paid.
+  // No bKash gateway, no authorization — will integrate real sandbox API later.
   const [paymentVerified, setPaymentVerified] = useState(false);
   const [paidAmount, setPaidAmount] = useState(0);
-  const [showGateway, setShowGateway] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState('bkash');
+  const [transactionId, setTransactionId] = useState('');
   // Half-form tracker: fire once per field on blur (never blocks the UI).
   const trackedFields = useRef<Set<string>>(new Set());
   // Single-use token guard: double Enter / StrictMode double-invoke would
@@ -322,16 +320,15 @@ export default function BookNowModal({
   const selectedServiceType = serviceTypes.find(
     (s) => s.id === form.serviceNeeded || s.name === form.serviceNeeded
   );
-  const bookingCharge = Number(selectedServiceType?.serviceCharge) || 0;
-  const bookingMinPayment = Number(selectedServiceType?.minRequiredPayment) || 0;
-  const bookingDueAfter = Math.max(0, bookingCharge - (paidAmount || 0));
-  // Require gateway verification only when the service actually charges.
-  const paymentRequired = bookingCharge > 0 && bookingMinPayment > 0;
+const bookingCharge = Number(selectedServiceType?.serviceCharge) || 0;
+const bookingMinPayment = Math.ceil(bookingCharge / 2); // half payment
+const bookingDueAfter = Math.max(0, bookingCharge - (paidAmount || 0));
+const paymentRequired = bookingCharge > 0;
 
   const handleServiceChange = (value: string) => {
     update('serviceNeeded', value);
     // New service = new price: reset the payment verification.
-    setPaymentMethod('');
+    setPaymentMethod('bkash');
     setTransactionId('');
     setPaymentVerified(false);
     setPaidAmount(0);
@@ -471,14 +468,14 @@ export default function BookNowModal({
     await submitBooking(bookingToken);
   };
 
-  // Auto-submit booking after bKash payment is verified.
-  useEffect(() => {
-    if (paymentVerified && !bookingToken && !submitInflight.current && !loading && !hasAutoSubmitted.current) {
-      hasAutoSubmitted.current = true;
-      toast.loading('Creating your booking…', { id: 'booking-submit' });
-      void submitBooking('');
-    }
-  }, [paymentVerified, bookingToken, loading]);
+  // // Auto-submit booking after bKash payment is verified.
+  // useEffect(() => {
+  //   if (paymentVerified && !bookingToken && !submitInflight.current && !loading && !hasAutoSubmitted.current) {
+  //     hasAutoSubmitted.current = true;
+  //     toast.loading('Creating your booking…', { id: 'booking-submit' });
+  //     void submitBooking('');
+  //   }
+  // }, [paymentVerified, bookingToken, loading]);
 
   /**
    * Anti-fraud step 2: verify the OTP, then create the booking with the
@@ -915,41 +912,36 @@ export default function BookNowModal({
                 </div>
 
                 {/* Payment summary + dummy gateway trigger */}
-                {selectedServiceType && bookingCharge > 0 && (
-                  <div className="min-w-0 rounded-lg border border-amber-200 bg-amber-50 p-3 sm:col-span-2">
-                    <h4 className="mb-2 text-[13px] font-bold text-amber-900">
-                      Payment Required
-                    </h4>
-                    <div className="grid grid-cols-3 divide-x divide-amber-200 text-center">
-                      <div className="min-w-0 px-1">
-                        <p className="text-[11px] leading-tight text-gray-500">Total</p>
-                        <p className="mt-0.5 break-words text-[13px] font-bold text-gray-900">{formatBDT(bookingCharge)}</p>
-                      </div>
-                      <div className="min-w-0 px-1">
-                        <p className="text-[11px] leading-tight text-gray-500">Pay now</p>
-                        <p className="mt-0.5 break-words text-[13px] font-bold text-amber-700">{formatBDT(bookingMinPayment)}</p>
-                      </div>
-                      <div className="min-w-0 px-1">
-                        <p className="text-[11px] leading-tight text-gray-500">Due after</p>
-                        <p className="mt-0.5 break-words text-[13px] font-bold text-rose-600">{formatBDT(bookingDueAfter)}</p>
-                      </div>
-                    </div>
-                    {paymentVerified ? (
-                      <p className="mt-2 break-words text-xs font-semibold leading-relaxed text-green-700">
-                        ✓ {formatBDT(paidAmount)} paid via {paymentMethod} (Txn: {transactionId}) — verified
-                      </p>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => setShowGateway(true)}
-                        className="mt-2.5 h-10 w-full rounded-md bg-pink-600 px-4 text-[15px] font-bold text-white transition hover:bg-pink-700 active:bg-pink-700 sm:text-sm"
-                      >
-                        Pay with bKash ({formatBDT(bookingMinPayment)})
-                      </button>
-                    )}
-                  </div>
-                )}
+              {/* Half payment */}
+{selectedServiceType && bookingCharge > 0 && (
+  <div className="min-w-0 rounded-lg border border-amber-200 bg-amber-50 p-3 sm:col-span-2">
+    <p className="text-[13px] font-bold text-amber-900">
+      অর্ধেক পেমেন্ট করুন
+    </p>
+    <p className="mt-1 text-xs text-gray-600">
+      মোট {formatBDT(bookingCharge)} — এখন দিন {formatBDT(bookingMinPayment)}, বাকি {formatBDT(bookingCharge - bookingMinPayment)} পরে।
+    </p>
 
+    {paymentVerified ? (
+      <p className="mt-2 text-xs font-semibold text-green-700">
+        ✓ {formatBDT(paidAmount)} পেমেন্ট সম্পন্ন হয়েছে
+      </p>
+    ) : (
+      <button
+        type="button"
+        onClick={() => {
+  setPaymentVerified(true);
+  setPaidAmount(bookingMinPayment);
+  setPaymentMethod('bkash');
+  setTransactionId('bkash-test-' + Date.now());
+}}
+        className="mt-2.5 h-10 w-full rounded-md bg-emerald-600 px-4 text-[15px] font-bold text-white transition hover:bg-emerald-700 active:bg-emerald-800 sm:text-sm"
+      >
+        Pay {formatBDT(bookingMinPayment)}
+      </button>
+    )}
+  </div>
+)}
                 {isMedicineService && (
                   <div className="min-w-0 rounded-lg border border-blue-200 bg-blue-50 p-3 sm:col-span-2">
                     <h4 className="mb-2 text-[13px] font-bold text-blue-800">Medicine Details</h4>
@@ -1245,29 +1237,12 @@ export default function BookNowModal({
                 : loading
                 ? 'Submitting...'
                 : paymentRequired && !paymentVerified
-                ? 'Pay with bKash'
+                ? 'Pay & Submit Booking Request'
                 : 'Submit Booking Request'}
             </button>
           </div>
         </form>
       </div>
-
-      {/* bKash gateway modal */}
-      {showGateway && (
-        <DummyCheckout
-          amount={bookingMinPayment}
-          onVerified={(r) => {
-            if (r.success) {
-              setPaymentMethod(r.method);
-              setTransactionId(r.txnId);
-              setPaidAmount(r.amount);
-              setPaymentVerified(true);
-            }
-            setShowGateway(false);
-          }}
-          onCancel={() => setShowGateway(false)}
-        />
-      )}
     </div>
   );
 }
